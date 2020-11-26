@@ -14,7 +14,7 @@ import (
 	"go-hep.org/x/hep/fmom"
 )
 
-func Sonn(
+func RecoTops(
 	lep, lepbar fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jet, jetbar fmom.PxPyPzE, emissx, emissy float64,
 	nbjets int,
@@ -67,3 +67,9 @@ func Sonn(
 
 	return tlvs
 }
+
+/* TO BE WRITTEN
+func SetupSmearingFile(fname string) {
+	C.sonn()
+}
+*/
