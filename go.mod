@@ -1,4 +1,4 @@
-module rmadar/sonn
+module github.com/rmadar/go-topquark-reco
 
 go 1.16
 
