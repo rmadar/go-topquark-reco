@@ -8,6 +8,29 @@
 #include "TMath.h"
 #include "Math/Polynomial.h"
 #include "TH1F.h"
+#include "TFile.h"
+
+// Smearing histograms
+extern TH1F *h_pT_lep_ee_smear;
+extern TH1F *h_pT_lep_mm_smear;
+extern TH1F *h_mlblb_smear;
+extern TH1F *h_theta_jet_smear;
+extern TH1F *h_theta_jetbar_smear;
+extern TH1F *h_pT_jet_smear;
+extern TH1F *h_theta_lep_ee_smear;
+extern TH1F *h_theta_lep_mm_smear;
+
+void load_smearing_histos(const char *fname) {
+	auto f = TFile::Open(fname);
+	h_pT_lep_ee_smear =    (TH1F*)f->Get("h_pT_lep_ee_smear");
+	h_pT_lep_mm_smear =    (TH1F*)f->Get("h_pT_lep_mm_smear");
+	h_mlblb_smear =        (TH1F*)f->Get("mlblb_smear");
+	h_theta_jet_smear =    (TH1F*)f->Get("h_theta_jet_smear");
+	h_theta_jetbar_smear = (TH1F*)f->Get("h_theta_jetbar_smear");
+	h_pT_jet_smear =       (TH1F*)f->Get("h_pT_jet_smear");
+	h_theta_lep_ee_smear = (TH1F*)f->Get("h_theta_lep_ee_smear");
+	h_theta_lep_mm_smear = (TH1F*)f->Get("h_theta_lep_mm_smear");
+}
 
 namespace AnalyticalTopReconstruction{
 
