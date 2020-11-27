@@ -15,8 +15,8 @@ import (
 )
 
 func RecoTops(
-	lep, lepbar fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
-	jet, jetbar fmom.PxPyPzE, emissx, emissy float64,
+	lep, lepbar fmom.P4, pdgIDLep, pdgIDLepBar int,
+	jet, jetbar fmom.P4, emissx, emissy float64,
 	nbjets int,
 ) []fmom.PxPyPzE {
 
@@ -68,8 +68,8 @@ func RecoTops(
 	return tlvs
 }
 
-/* TO BE WRITTEN
 func SetupSmearingFile(fname string) {
-	C.sonn()
+	cname := C.CString(fname)
+	defer C.free(unsafe.Pointer(cname))
+	C.load_smearing_histos(cname)
 }
-*/

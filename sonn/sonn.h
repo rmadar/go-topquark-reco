@@ -22,6 +22,8 @@ tlvs_t sonn(
 		double emissx, double emissy,
 		int nbjets);
 
+void load_smearing_histos(const char* fname);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
