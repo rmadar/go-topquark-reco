@@ -47,7 +47,7 @@ tlv_t get_tlv(tlv_t *tlvs, int i) {
 
 tlvs_t sonn(
 	    tlv_t lep, tlv_t lepbar, int pdgID_lep, int pdgID_lepbar,
-	    tlv_t jet, tlv_t jetbar, bool isb_jet, bool isb_jetbar,
+	    tlv_t jet, tlv_t jetbar, int isb_jet, int isb_jetbar,
 	    double emissx, double emissy) {
   
   TLorentzVector tlvLep;
@@ -62,7 +62,7 @@ tlvs_t sonn(
   
   auto out = AnalyticalTopReconstruction::Sonnenschein(
 						       tlvLep, tlvLepBar, pdgID_lep, pdgID_lepbar,
-						       tlvJet, tlvJetBar, isb_jet, isb_jetbar,
+						       tlvJet, tlvJetBar, (bool) isb_jet, (bool) isb_jetbar,
 						       emissx, emissy);
   
   tlvs_t tlvs;

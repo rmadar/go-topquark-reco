@@ -32,18 +32,19 @@ func main() {
 	// Get variables to read
 	var (
 		nBad = 0
-		evtNum int64
-		lepPt  []float32
-		lepEta []float32
-		lepPhi []float32
-		lepPid []int32
-		jetPt  []float32
-		jetE   []float32
-		jetEta []float32
-		jetPhi []float32
-		nBjets int32
-		metMet float32
-		metPhi float32
+		evtNum    int64
+		lepPt     []float32
+		lepEta    []float32
+		lepPhi    []float32
+		lepPid    []int32
+		jetPt     []float32
+		jetE      []float32
+		jetEta    []float32
+		jetPhi    []float32
+		jetMV2c10 []float32
+		nBjets    int32
+		metMet    float32
+		metPhi    float32
 
 		rvars = []rtree.ReadVar{
 			{Name: "eventNumber", Value: &evtNum},
@@ -55,6 +56,7 @@ func main() {
 			{Name: "d_jet_e", Value: &jetE},
 			{Name: "d_jet_eta", Value: &jetEta},
 			{Name: "d_jet_phi", Value: &jetPhi},
+			{Name: "d_jet_mv2c10", Value: &jetMV2c10},
 			{Name: "d_nbjet", Value: &nBjets},
 			{Name: "d_met_met", Value: &metMet},
 			{Name: "d_met_phi", Value: &metPhi},
@@ -87,10 +89,17 @@ func main() {
 			}
 		}
 		
-		// Prepare jet four vectors based on the 2 leading jets
+		// Prepare jet four vectors and b-tagg info based on the 2 leading jets
 		var j1P, j2P lv.FourVec
 		j1P = lv.NewFourVecPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[1]), float64(jetE[0]))
 		j2P = lv.NewFourVecPtEtaPhiE(float64(jetPt[1]), float64(jetEta[1]), float64(jetPhi[1]), float64(jetE[1]))
+		j1b, j2b := 0, 0
+		if jetMV2c10[0] > 0.691 {
+			j1b = 1
+		}
+		if jetMV2c10[1] > 0.691 {
+			j2b = 1 
+		}
 		
 		// Prepare missing transverse energy component
 		Etx := float64(metMet) * math.Cos(float64(metPhi))
@@ -99,7 +108,8 @@ func main() {
 		// Call the Sonnenschein reconstruction
 		tops := sonn.RecoTops(
 			fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
-			fmomP4from(j1P), fmomP4from(j2P), Etx, Ety, int(nBjets),
+			fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
+			Etx, Ety, 
 		)
 
 		// Keep track of not reconstructed events
