@@ -18,9 +18,8 @@ tlv_t get_tlv(tlv_t *tlvs, int i);
 
 tlvs_t sonn(
 		tlv_t lep, tlv_t lepbar, int pdgID_lep, int pdgID_lepbar,
-		tlv_t jet, tlv_t jetbar, 
-		double emissx, double emissy,
-		int nbjets);
+		tlv_t jet, tlv_t jetbar, bool isb_jet, bool isb_jetbar,
+		double emissx, double emissy);
 
 void load_smearing_histos(const char* fname);
 

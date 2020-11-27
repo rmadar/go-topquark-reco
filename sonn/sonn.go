@@ -16,8 +16,9 @@ import (
 
 func RecoTops(
 	lep, lepbar fmom.P4, pdgIDLep, pdgIDLepBar int,
-	jet, jetbar fmom.P4, emissx, emissy float64,
-	nbjets int,
+	jet, jetbar fmom.P4, isbJet, isbJetbar bool,
+	emissx, emissy float64,
+
 ) []fmom.PxPyPzE {
 
 	var (
@@ -49,11 +50,11 @@ func RecoTops(
 
 	out := C.sonn(
 		tlvLep, tlvLepBar, C.int(pdgIDLep), C.int(pdgIDLepBar),
-		tlvJet, tlvJetBar, C.double(emissx), C.double(emissy),
-		C.int(nbjets),
+		tlvJet, tlvJetBar, isbJet, isbJetbar,
+		C.double(emissx), C.double(emissy),
 	)
 	defer C.free(unsafe.Pointer(out.tlvs))
-
+	
 	tlvs := make([]fmom.PxPyPzE, out.n)
 	for i := range tlvs {
 		tlv := C.get_tlv(out.tlvs, C.int(i))

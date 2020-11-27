@@ -34,16 +34,18 @@ namespace AnalyticalTopReconstruction{
   }
 
   // Compute the complete four vectors of top quarks
-  std::vector<TLorentzVector> Sonnenschein(TLorentzVector tlv_lep, TLorentzVector tlv_lepbar, int pdgId_lep, int pdgId_lepbar, TLorentzVector tlv_jet, TLorentzVector tlv_jetbar, Double_t Emiss_x, Double_t Emiss_y, int nBJets) {
+  std::vector<TLorentzVector> Sonnenschein(TLorentzVector tlv_lep, TLorentzVector tlv_lepbar, int pdgId_lep, int pdgId_lepbar,
+					   TLorentzVector tlv_jet, TLorentzVector tlv_jetbar, bool isb_jet, bool isb_jetbar, 
+					   Double_t Emiss_x, Double_t Emiss_y) {
     
     std::vector<TLorentzVector> return_top_tbar;
     return_top_tbar.push_back(TLorentzVector());
     return_top_tbar.push_back(TLorentzVector());
-    
-    if (nBJets < 2) {
+
+    // Run the reconstruction only if the two jets are btags
+    if (!isb_jet || !isb_jetbar)
       return return_top_tbar;
-    }
-    
+       
     bool lep_is_e     = ( abs(pdgId_lep)    == 11 );
     bool lep_is_mu    = ( abs(pdgId_lep)    == 13 );
     bool lepbar_is_e  = ( abs(pdgId_lepbar) == 11 );

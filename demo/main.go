@@ -31,6 +31,7 @@ func main() {
 
 	// Get variables to read
 	var (
+		nBad = 0
 		evtNum int64
 		lepPt  []float32
 		lepEta []float32
@@ -61,7 +62,7 @@ func main() {
 	)
 
 	// Get the TTree reader
-	r, err := rtree.NewReader(t, rvars, rtree.WithRange(0, 10))
+	r, err := rtree.NewReader(t, rvars, rtree.WithRange(0, 100))
 	if err != nil {
 		log.Fatalf("could not create tree reader: %+v", err)
 	}
@@ -100,6 +101,11 @@ func main() {
 			fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
 			fmomP4from(j1P), fmomP4from(j2P), Etx, Ety, int(nBjets),
 		)
+
+		// Keep track of not reconstructed events
+		if isBad(tops[0]) ||  isBad(tops[1]) {
+			nBad += 1;
+		}
 		
 		// Print some information
 		fmt.Printf("Entry %d:\n", ctx.Entry)
@@ -113,6 +119,8 @@ func main() {
 		
 		return nil
 	})
+
+	fmt.Printf("Number of events w/o reconstruction: %v\n\n", nBad)
 	
 	if err != nil {
 		log.Fatalf("could not process tree: %+v", err)
@@ -124,4 +132,9 @@ func main() {
 func fmomP4from(fv lv.FourVec) fmom.P4 {
 	res := fmom.NewPxPyPzE(fv.Px(), fv.Py(), fv.Pz(), fv.E())
 	return res.Clone()
+}
+
+// Helper function checking of the P4[top] makes sense
+func isBad(t fmom.PxPyPzE) bool {
+	return t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
 }
