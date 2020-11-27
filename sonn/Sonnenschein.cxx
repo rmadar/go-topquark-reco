@@ -50,8 +50,8 @@ namespace AnalyticalTopReconstruction{
     bool lepbar_is_mu = ( abs(pdgId_lepbar) == 13 );
     
     // the lepton TLV is still in MeV, rescale!
-    tlv_lep.SetPtEtaPhiE(   tlv_lep.Pt()/1000.,    tlv_lep.Eta(),    tlv_lep.Phi(),    tlv_lep.E()/1000.);
-    tlv_lepbar.SetPtEtaPhiE(tlv_lepbar.Pt()/1000., tlv_lepbar.Eta(), tlv_lepbar.Phi(), tlv_lepbar.E()/1000.);
+    // tlv_lep.SetPtEtaPhiE(   tlv_lep.Pt()/1000.,    tlv_lep.Eta(),    tlv_lep.Phi(),    tlv_lep.E()/1000.);
+    // tlv_lepbar.SetPtEtaPhiE(tlv_lepbar.Pt()/1000., tlv_lepbar.Eta(), tlv_lepbar.Phi(), tlv_lepbar.E()/1000.);
     
     // particle masses (in GeV)
     Double_t m_W      = 80.379;

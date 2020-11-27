@@ -31,6 +31,7 @@ func main() {
 
 	// Get variables to read
 	var (
+		evtNum int64
 		lepPt  []float32
 		lepEta []float32
 		lepPhi []float32
@@ -44,6 +45,7 @@ func main() {
 		metPhi float32
 
 		rvars = []rtree.ReadVar{
+			{Name: "eventNumber", Value: &evtNum},
 			{Name: "d_lep_pt", Value: &lepPt},
 			{Name: "d_lep_eta", Value: &lepEta},
 			{Name: "d_lep_phi", Value: &lepPhi},
@@ -59,7 +61,7 @@ func main() {
 	)
 
 	// Get the TTree reader
-	r, err := rtree.NewReader(t, rvars)
+	r, err := rtree.NewReader(t, rvars, rtree.WithRange(0, 10))
 	if err != nil {
 		log.Fatalf("could not create tree reader: %+v", err)
 	}
@@ -99,15 +101,16 @@ func main() {
 			fmomP4from(j1P), fmomP4from(j2P), Etx, Ety, int(nBjets),
 		)
 		
-
 		// Print some information
-		fmt.Printf("Event %d:\n", ctx.Entry)
+		fmt.Printf("Entry %d:\n", ctx.Entry)
+		fmt.Printf("   - Evt number   %v\n"  , evtNum)
 		fmt.Printf("   - N[b-jets]    %v\n"  , nBjets)
+		fmt.Printf("   - final state  %v\n"  , lepPid)
+		fmt.Printf("   - P4[l]        %v\n"  , fmomP4from(lP))
+		fmt.Printf("   - P4[lbar]     %v\n"  , fmomP4from(lbarP))
 		fmt.Printf("   - P4[top]      %v\n"  , tops[0])
 		fmt.Printf("   - P4[anti-top] %v\n\n", tops[1])
 		
-
-
 		return nil
 	})
 	
