@@ -1,3 +1,6 @@
+#include <stdio.h> 
+#include <iostream>
+
 #include "TROOT.h"
 #include "TLorentzVector.h"
 #include "TVector3.h"
@@ -18,26 +21,21 @@ TH1F *h_theta_lep_ee_smear;
 TH1F *h_theta_lep_mm_smear;
 
 namespace AnalyticalTopReconstruction{
-
-  // Initialize smearing histograms
-  void initHistoSmear(char *fname) {
-    TFile *f_smear       = TFile::Open(fname, "READ");
-    h_pT_lep_ee_smear    = (TH1F*)f_smear->Get("h_pT_lep_ee_smear")->Clone();
-    h_pT_lep_mm_smear    = (TH1F*)f_smear->Get("h_pT_lep_mm_smear")->Clone();
-    h_mlblb_smear        = (TH1F*)f_smear->Get("mlblb_smear")->Clone();
-    h_theta_jet_smear    = (TH1F*)f_smear->Get("h_theta_jet_smear")->Clone();
-    h_theta_jetbar_smear = (TH1F*)f_smear->Get("h_theta_jetbar_smear")->Clone();
-    h_pT_jet_smear       = (TH1F*)f_smear->Get("h_pT_jet_smear")->Clone();
-    h_theta_lep_ee_smear = (TH1F*)f_smear->Get("h_theta_lep_ee_smear")->Clone();
-    h_theta_lep_mm_smear = (TH1F*)f_smear->Get("h_theta_lep_mm_smear")->Clone();
-    return;
-  }
-
+  
   // Compute the complete four vectors of top quarks
   std::vector<TLorentzVector> Sonnenschein(TLorentzVector tlv_lep, TLorentzVector tlv_lepbar, int pdgId_lep, int pdgId_lepbar,
 					   TLorentzVector tlv_jet, TLorentzVector tlv_jetbar, bool isb_jet, bool isb_jetbar, 
 					   Double_t Emiss_x, Double_t Emiss_y) {
     
+    // Debug
+    bool print = false;
+    
+    // Smearing parameter
+    int Nsmear = 100;
+    bool applySmearing = true;
+    if (!applySmearing) Nsmear=1; 
+    
+    // Container for output 4-momentum
     std::vector<TLorentzVector> return_top_tbar;
     return_top_tbar.push_back(TLorentzVector());
     return_top_tbar.push_back(TLorentzVector());
@@ -64,13 +62,8 @@ namespace AnalyticalTopReconstruction{
     Double_t m_nubar  = 0.;
     Double_t m_top    = 172.5;
     Double_t m_topbar = 172.5;
-    // Double_t m_e      = 0.000511; unused!
-    // Double_t m_mu     = 0.10566; unused!
-    // Double_t m_tau    = 1.77686; unused!
     Double_t m_lep    = 0;
     Double_t m_lepbar = 0;
-    // Double_t m_lep_0; unused!
-    // Double_t m_lep_1; unused!
     
     TLorentzVector nu, nubar;
     TLorentzVector nu_NW, nubar_NW;
@@ -88,40 +81,18 @@ namespace AnalyticalTopReconstruction{
     TLorentzVector lep0, lepbar0;
     TLorentzVector lep1, lepbar1;
     TLorentzVector Top1,Topbar1,Top2;
+
     
-    Double_t Vec_Top[2][3];
-    Double_t Vec_Topbar[2][3];
-    std::vector<Double_t> weights_com;
+    Int_t i_analyzed_event; // Not really used
+    Int_t n_solutions;
     
-    Int_t i_analyzed_event;
-    
-    // Double_t n_solutions_1 = 0; unused!
-    Int_t n_solutions; // n_solutions_f; unused!
-    
-    // Double_t Delta; unused!
-    
-    // Double_t p_nu_x = -999.; unused!
     Double_t p_nu_y = -999.;
     Double_t p_nu_z = -999.;
-    
     Double_t p_nubar_x = -999.;
     Double_t p_nubar_y = -999.;
     Double_t p_nubar_z = -999.;
-    
-    // Double_t delta_x = 100000.; unused!
-    // Double_t delta_y = 100000.; unused!
     Double_t delta_z = 100000.;
-    
     Double_t p_nu_x_close = 100000.;
-    
-    // Double_t delta_nubar_x = 100000.; unused!
-    // Double_t delta_nubar_y = 100000.; unused!
-    // Double_t delta_nubar_z = 100000.; unused!
-    
-    // Double_t p_nu_x_t = -999.; unused!
-    // Double_t p_nu_y_t = -999.; unused!
-    // Double_t p_nu_z_t = -999.; unused!
-    
     Double_t p_nu_x_close_f = -999.;
     Double_t p_nu_y_f = -999.;
     Double_t p_nu_z_f = -999.;
@@ -132,12 +103,11 @@ namespace AnalyticalTopReconstruction{
     Double_t Top_mass_f = 100000.;
     Double_t Topbar_mass_f = 100000.;
     Double_t Top_mass_f_1 = 100000.;
-    
-    // Double_t mtt_ord[5]; unused!
     std::vector<Double_t> mtt_val;
-    // Double_t mtt_truth = 100000.; unused!
-    
-    
+	
+    Double_t Vec_Top[2][3];
+    Double_t Vec_Topbar[2][3];
+    std::vector<Double_t> weights_com;
     for (int i_n1=0; i_n1<2; i_n1++ ) {
       for (int i_n2=0; i_n2<3; i_n2++ ) {
 	Vec_Top[i_n1][i_n2]    = 0.;
@@ -150,23 +120,30 @@ namespace AnalyticalTopReconstruction{
       
       Double_t weight_s_sum = 0.;
       TRandom3 r;
+
+      if (print) {
+	std::cout << " Jets combination " << i_jets << ": " << std::endl;
+      }
       
-      for (int i_smear =0; i_smear<10; i_smear++) {
+      int nIterations = 0;
+      for (int i_smear=0; i_smear<Nsmear; i_smear++) {
 	
 	Double_t smear_scale_0     = 1.;
 	Double_t smear_scale_1     = 1.;
 	Double_t smear_scale_jet_0 = 1.;
 	Double_t smear_scale_jet_1 = 1.;
-	
-	if (lep_is_e)          smear_scale_0 = h_pT_lep_ee_smear->GetRandom();
-	else if (lep_is_mu)    smear_scale_0 = h_pT_lep_mm_smear->GetRandom();
-	else                   smear_scale_0 = 1.;
-	if (lepbar_is_e)       smear_scale_1 = h_pT_lep_ee_smear->GetRandom();
-	else if (lepbar_is_mu) smear_scale_1 = h_pT_lep_mm_smear->GetRandom();
-	else                   smear_scale_1 = 1.;
+
+	if (applySmearing) {
+	  if (lep_is_e)          smear_scale_0 = h_pT_lep_ee_smear->GetRandom();
+	  else if (lep_is_mu)    smear_scale_0 = h_pT_lep_mm_smear->GetRandom();
+	  else                   smear_scale_0 = 1.;
+	  if (lepbar_is_e)       smear_scale_1 = h_pT_lep_ee_smear->GetRandom();
+	  else if (lepbar_is_mu) smear_scale_1 = h_pT_lep_mm_smear->GetRandom();
+	  else                   smear_scale_1 = 1.;
+	}
 	
 	lepbar_pt_smear = tlv_lepbar;
-	lepbar_pt_smear.SetPtEtaPhiM(lepbar_pt_smear.Pt()*smear_scale_0,lepbar_pt_smear.Eta(),lepbar_pt_smear.Phi(),m_lepbar);
+	lepbar_pt_smear.SetPtEtaPhiM(lepbar_pt_smear.Pt()*smear_scale_0, lepbar_pt_smear.Eta(), lepbar_pt_smear.Phi(), m_lepbar);
 	lep_pt_smear    = tlv_lep;
 	lep_pt_smear.SetPtEtaPhiM(lep_pt_smear.Pt()*smear_scale_1,lep_pt_smear.Eta(),lep_pt_smear.Phi(),m_lep);
 	lepbar_nosmear  = tlv_lepbar;
@@ -188,10 +165,17 @@ namespace AnalyticalTopReconstruction{
 	TVector3 lep_v_pt = lep_v_pt_1;
 	TVector3 lepbar_v_pt = lepbar_v_pt_1;
 	
-	Double_t smear_angle_ee_lep    = h_theta_lep_ee_smear->GetRandom();
-	Double_t smear_angle_ee_lepbar = h_theta_lep_ee_smear->GetRandom();
-	Double_t smear_angle_mm_lep    = h_theta_lep_mm_smear->GetRandom();
-	Double_t smear_angle_mm_lepbar = h_theta_lep_mm_smear->GetRandom();
+	Double_t smear_angle_ee_lep    = 0.;
+	Double_t smear_angle_ee_lepbar = 0.;
+	Double_t smear_angle_mm_lep    = 0.;
+	Double_t smear_angle_mm_lepbar = 0.;
+
+	if (applySmearing) {
+	  smear_angle_ee_lep    = h_theta_lep_ee_smear->GetRandom();
+	  smear_angle_ee_lepbar = h_theta_lep_ee_smear->GetRandom();
+	  smear_angle_mm_lep    = h_theta_lep_mm_smear->GetRandom();
+	  smear_angle_mm_lepbar = h_theta_lep_mm_smear->GetRandom();
+	}
 	
 	if (tlv_lep.Pt() > tlv_lepbar.Pt()) {
 	  if (lep_is_e)          lep_v_pt.Rotate(smear_angle_ee_lep, transe_lep_axis);
@@ -207,9 +191,11 @@ namespace AnalyticalTopReconstruction{
 	
 	lep.SetPxPyPzE(   lep_v_pt[0],    lep_v_pt[1],    lep_v_pt[2],    lep_pt_smear.E());
 	lepbar.SetPxPyPzE(lepbar_v_pt[0], lepbar_v_pt[1], lepbar_v_pt[2], lepbar_pt_smear.E());
-	
-	smear_scale_jet_0 = h_pT_jet_smear->GetRandom();
-	smear_scale_jet_1 = h_pT_jet_smear->GetRandom();
+
+	if (applySmearing) {
+	  smear_scale_jet_0 = h_pT_jet_smear->GetRandom();
+	  smear_scale_jet_1 = h_pT_jet_smear->GetRandom();
+	}
 	
 	if (i_jets==0) {
 	  jetbar_pt_smear = tlv_jetbar;
@@ -227,7 +213,7 @@ namespace AnalyticalTopReconstruction{
 	  jetbar_nosmear  = tlv_jet;
 	  jet_nosmear     = tlv_jetbar;
 	}
-	
+
 	// let's define axis.transverse to jet momentun (for theta smearing accounting)
 	TVector3 jet_v_pt_1    = jet_pt_smear.Vect();
 	TVector3 jetbar_v_pt_1 = jetbar_pt_smear.Vect();
@@ -240,10 +226,15 @@ namespace AnalyticalTopReconstruction{
 	
 	TVector3 jet_v_pt = jet_v_pt_1;
 	TVector3 jetbar_v_pt = jetbar_v_pt_1;
+
+	Double_t smear_angle_jet    = 0.0;
+	Double_t smear_angle_jetbar = 0.0;
 	
-	Double_t smear_angle_jet    = h_theta_jet_smear->GetRandom();
-	Double_t smear_angle_jetbar = h_theta_jetbar_smear->GetRandom();
-	
+	if (applySmearing) {
+	  smear_angle_jet    = h_theta_jet_smear->GetRandom();
+	  smear_angle_jetbar = h_theta_jetbar_smear->GetRandom();
+	}
+
 	jet_v_pt.Rotate(smear_angle_jet, transe_jet_axis);
 	jetbar_v_pt.Rotate(smear_angle_jetbar, transe_jetbar_axis);
 	
@@ -261,11 +252,30 @@ namespace AnalyticalTopReconstruction{
 	TVector3 lep_v = lep.Vect();
 	TVector3 jetbar_v = jetbar.Vect();
 	TVector3 lepbar_v = lepbar.Vect();
-	
-	Emiss_x = Emiss_x + (lep_nosmear.Px() - lep.Px()) + (lepbar_nosmear.Px() - lepbar.Px()) +
+
+	Double_t Emiss_x_nosmear = Emiss_x;
+	Double_t Emiss_y_nosmear = Emiss_y;
+	Double_t Emiss_x_smear, Emiss_y_smear;
+
+	Emiss_x_smear = Emiss_x_nosmear + (lep_nosmear.Px() - lep.Px()) + (lepbar_nosmear.Px() - lepbar.Px()) +
 	  (jet_nosmear.Px() - jet.Px()) + (jetbar_nosmear.Px() - jetbar.Px());
-	Emiss_y = Emiss_y  + (lep_nosmear.Py() - lep.Py()) + (lepbar_nosmear.Py() - lepbar.Py()) +
+	Emiss_y_smear = Emiss_y_nosmear  + (lep_nosmear.Py() - lep.Py()) + (lepbar_nosmear.Py() - lepbar.Py()) +
 	  (jet_nosmear.Py() - jet.Py()) + (jetbar_nosmear.Py() - jetbar.Py());
+	
+	
+	if (print) {
+	  std::cout << "  Smearing iteration " << i_smear << ": " << std::endl;
+	  std::cout << "   Lepton scale smearing: " << smear_scale_0 << ", " << smear_scale_1 << std::endl;
+	  std::cout << "   Lepton angle smearing: " << smear_angle_ee_lep << ", "
+	  		    << smear_angle_ee_lepbar << ", " <<  smear_angle_mm_lep << ", " << smear_angle_mm_lepbar << std::endl;
+	  std::cout << "   Jet scale smearing: " <<  smear_scale_jet_0 << ", " << smear_scale_jet_1 << std::endl;
+	  std::cout << "   Jet angle smearing: " <<  smear_angle_jet << ", " <<  smear_angle_jetbar << std::endl;;
+	  std::cout << "   Px before smear (l, lbar, j, jbar, met): " << lep_nosmear.Px() << ",  " << lepbar_nosmear.Px()
+	  		    << ",  " << jet_nosmear.Px() << ",  " << jetbar_nosmear.Px() << ", " << Emiss_x_nosmear  << std::endl;
+	  std::cout << "   Px after  smear (l, lbar, j, jbar, met): " << lep.Px() << ",  " << lepbar.Px() << ",  "
+	  		    << jet.Px() << ",  " << jetbar.Px() << ", " << Emiss_x_smear  << std::endl;
+	}
+
 	
 	Double_t a1 = (jet.E() + lepbar.E())*(m_W*m_W - m_lepbar*m_lepbar - m_nu*m_nu)-
 	  lepbar.E()*(m_top*m_top - m_b*m_b - m_lepbar*m_lepbar - m_nu*m_nu)+
@@ -303,8 +313,7 @@ namespace AnalyticalTopReconstruction{
 	  4.*(lepbar.E()*lepbar.E() - lepbar.Pz()*lepbar.Pz())*(a3/a4)*(a3/a4) -
 	  8.*lepbar.Py()*lepbar.Pz()*a3/a4;
 	
-	//new norm
-	
+	//new norm	
 	c22 = c22*a4*a4;
 	c21 = c21*a4*a4;
 	c20 = c20*a4*a4;
@@ -330,11 +339,11 @@ namespace AnalyticalTopReconstruction{
 	  4.*(lep.E()*lep.E() - lep.Pz()*lep.Pz())*(b3/b4)*(b3/b4)-
 	  8.*lep.Py()*lep.Pz()*b3/b4;
 	
-	Double_t d22 = dp22 + Emiss_x * Emiss_x * dp20 + Emiss_y * Emiss_y * dp00 +
-	  Emiss_x * Emiss_y * dp10 + Emiss_x * dp21 + Emiss_y * dp11;
-	Double_t d21 = -1. * dp21 - 2.* Emiss_x * dp20 - Emiss_y * dp10;
+	Double_t d22 = dp22 + Emiss_x_smear * Emiss_x_smear * dp20 + Emiss_y_smear * Emiss_y_smear * dp00 +
+	  Emiss_x_smear * Emiss_y_smear * dp10 + Emiss_x_smear * dp21 + Emiss_y_smear * dp11;
+	Double_t d21 = -1. * dp21 - 2.* Emiss_x_smear * dp20 - Emiss_y_smear * dp10;
 	Double_t d20 = dp20;
-	Double_t d11 = -1. * dp11 - 2. * Emiss_y * dp00 - Emiss_x * dp10;
+	Double_t d11 = -1. * dp11 - 2. * Emiss_y_smear * dp00 - Emiss_x_smear * dp10;
 	Double_t d10 = dp10;
 	Double_t d00 = dp00;
 	
@@ -373,7 +382,9 @@ namespace AnalyticalTopReconstruction{
 	std::vector<Double_t> roots = poly.FindRealRoots();
 	
 	n_solutions = roots.size();
-	
+	if (print) {
+	  std::cout << "   number of polynom roots:" << n_solutions << std::endl;
+	}
 	// ---> beginning of solution selection
 	
 	// Double_t mtt_min_diff = 100000.; unused!
@@ -386,6 +397,9 @@ namespace AnalyticalTopReconstruction{
 	Double_t Topbar_reco_px = 10000.;
 	Double_t Topbar_reco_py = 10000.;
 	Double_t Topbar_reco_pz = 10000.;
+
+	if (n_solutions==0) continue;
+	nIterations++;
 	
 	for (std::vector<Double_t>::iterator it = roots.begin() ; it!=roots.end() ; ++it){
 	  p_nu_x_close =  *it;
@@ -400,8 +414,8 @@ namespace AnalyticalTopReconstruction{
 	  p_nu_y = (c0*d2 -c2*d0)/(c1*d0 - c0*d1);
 	  p_nu_z = (-1.*a1 -a2*p_nu_x_close - a3*p_nu_y)/a4;
 	  delta_z = nu.Pz()-p_nu_z;
-	  p_nubar_x = Emiss_x - p_nu_x_close;
-	  p_nubar_y = Emiss_y - p_nu_y;
+	  p_nubar_x = Emiss_x_smear - p_nu_x_close;
+	  p_nubar_y = Emiss_y_smear - p_nu_y;
 	  p_nubar_z = (-1.*b1 -b2*p_nubar_x- b3*p_nubar_y)/b4;
 	  Double_t E_nu_calc = sqrt(p_nu_x_close*p_nu_x_close + p_nu_y*p_nu_y + p_nu_z*p_nu_z);
 	  nu_calc.SetPxPyPzE(p_nu_x_close,p_nu_y,p_nu_z,E_nu_calc);
@@ -447,58 +461,70 @@ namespace AnalyticalTopReconstruction{
 	    p_nubar_z_f = p_nubar_z;
 	    
 	    delta_TOP_mass = Top_calc.M() - m_top;
-	    // if(n_solutions > 0)  n_solutions_1 = n_solutions; unused!
 	  } // ---> end of solution selection
 	} // ---> end of the loop over solutions      
-	  Double_t weight_s_i1 =1.;
-	  Double_t weight_s_i2 =1.;
-	  
-	  TVector3 top_p_i(Top_reco_px,Top_reco_py,Top_reco_pz);
-	  TVector3 topbar_p_i(Topbar_reco_px,Topbar_reco_py,Topbar_reco_pz);
-	  
-	  TAxis *xaxis1 = h_mlblb_smear->GetXaxis();
-	  Int_t binx1 = xaxis1->FindBin(mlbarb.M());
-	  weight_s_i1 = h_mlblb_smear->GetBinContent(binx1);
-	  
-	  TAxis *xaxis2 = h_mlblb_smear->GetXaxis();
-	  Int_t binx2 = xaxis2->FindBin(mlbbar.M());
-	  weight_s_i2 = h_mlblb_smear->GetBinContent(binx2);
-	  
-	  Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*Top_reco_px;
-	  Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*Top_reco_py;
-	  Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*Top_reco_pz;
-	  
-	  
-	  Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*Topbar_reco_px;
-	  Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*Topbar_reco_py;
-	  Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*Topbar_reco_pz;
-	  
-	  weight_s_sum = weight_s_sum + weight_s_i1*weight_s_i2;
-	  
-	  i_analyzed_event = 1;
-	  
+	
+	Double_t weight_s_i1 =1.;
+	Double_t weight_s_i2 =1.;
+	
+	TVector3 top_p_i(Top_reco_px,Top_reco_py,Top_reco_pz);
+	TVector3 topbar_p_i(Topbar_reco_px,Topbar_reco_py,Topbar_reco_pz);
+	
+	TAxis *xaxis1 = h_mlblb_smear->GetXaxis();
+	Int_t binx1 = xaxis1->FindBin(mlbarb.M());
+	weight_s_i1 = h_mlblb_smear->GetBinContent(binx1);
+	
+	TAxis *xaxis2 = h_mlblb_smear->GetXaxis();
+	Int_t binx2 = xaxis2->FindBin(mlbbar.M());
+	weight_s_i2 = h_mlblb_smear->GetBinContent(binx2);
+	
+	Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*Top_reco_px;
+	Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*Top_reco_py;
+	Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*Top_reco_pz;
+		
+	Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*Topbar_reco_px;
+	Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*Topbar_reco_py;
+	Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*Topbar_reco_pz;
+	
+	weight_s_sum = weight_s_sum + weight_s_i1*weight_s_i2;
+	
+	i_analyzed_event = 1;
+
+	if (print) {
+	  std::cout << "   weight            : " << weight_s_sum << std::endl;
+	  std::cout << "   (px, py, pz)[t]   : " << Top_reco_px << ", " << Top_reco_py << ", " << Top_reco_pz << std::endl;
+	  std::cout << "   (px, py, pz)[tbar]: " << Topbar_reco_px << ", " << Topbar_reco_py << ", " << Topbar_reco_pz << std::endl;
+	}	
+	
       } // end loop over smear variations
+
+      if (print)
+	std::cout << " Number of iteration with solutions : " << nIterations << std::endl;
       
       weights_com.push_back(weight_s_sum);
       
-	if(i_jets == 0) {lep0 = lep; lepbar0 = lepbar; }
-	if(i_jets == 1) {lep1 = lep; lepbar1 = lepbar; }
-	
+      if(i_jets == 0) {lep0 = lep; lepbar0 = lepbar; }
+      if(i_jets == 1) {lep1 = lep; lepbar1 = lepbar; }
+      
     } // end of loop over jets                                 
-      // if not usefil solutions -> go to the next event
+
+    // if not usefil solutions -> go to the next event
     if(i_analyzed_event == 0 || weights_com.size() == 0) {
       return return_top_tbar;
     }
     
     
+    if (print)
+      std::cout << " Weight sum of jet combinatorics (0, 1): " << weights_com[0] << ", " << weights_com[1] << std::endl;
+      
+   
     TVector3 top_p_sum;
     TVector3 topbar_p_sum;
-    
-    Int_t i_weight_sel =0;
+    Int_t i_weight_sel = 0;
     
     if(weights_com[0] > weights_com[1] ) {
       if(weights_com[0] > 0. && Vec_Top[0][0] !=0) {
-	
+
 	top_p_sum.SetX(Vec_Top[0][0]/weights_com[0]);
 	top_p_sum.SetY(Vec_Top[0][1]/weights_com[0]);
 	top_p_sum.SetZ(Vec_Top[0][2]/weights_com[0]);
