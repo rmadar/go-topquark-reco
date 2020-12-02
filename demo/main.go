@@ -146,5 +146,7 @@ func fmomP4from(fv lv.FourVec) fmom.P4 {
 
 // Helper function checking of the P4[top] makes sense
 func isBad(t fmom.PxPyPzE) bool {
-	return t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
+	isDefault := t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
+	isEmpty := t.Px() == 0. && t.Py() == 0. && t.Pz() == 0.
+	return isDefault || isEmpty
 }
