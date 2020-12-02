@@ -28,10 +28,10 @@ namespace AnalyticalTopReconstruction{
 					   Double_t Emiss_x, Double_t Emiss_y) {
     
     // Debug
-    bool print = false;
+    bool print = true;
     
     // Smearing parameter
-    int Nsmear = 100;
+    int Nsmear = 10;
     bool applySmearing = true;
     if (!applySmearing) Nsmear=1; 
     
