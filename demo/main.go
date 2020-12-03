@@ -9,7 +9,6 @@ import (
 	"go-hep.org/x/hep/groot"
 	"go-hep.org/x/hep/groot/rtree"
 
-	"github.com/rmadar/go-lorentz-vector/lv"
 	"github.com/rmadar/go-topquark-reco/sonn"
 )
 
@@ -145,12 +144,6 @@ func main() {
 		log.Fatalf("could not process tree: %+v", err)
 	}
 
-}
-
-// Helper function to get a fmom.P4 from lv.FourVec
-func fmomP4from(fv lv.FourVec) fmom.P4 {
-	res := fmom.NewPxPyPzE(fv.Px(), fv.Py(), fv.Pz(), fv.E())
-	return &res
 }
 
 // Helper function checking of the P4[top] makes sense

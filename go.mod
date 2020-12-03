@@ -3,7 +3,6 @@ module github.com/rmadar/go-topquark-reco
 go 1.14
 
 require (
-	github.com/rmadar/go-lorentz-vector v0.0.0-20200408140142-c838293f9a81
 	go-hep.org/x/exp v0.7.1
 	go-hep.org/x/hep v0.28.4-0.20201203150704-9a1d24de83c8
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
