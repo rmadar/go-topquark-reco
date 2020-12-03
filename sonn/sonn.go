@@ -108,9 +108,6 @@ func Sonnenschein(
 		m_nubar  = 0.0
 		m_top    = 172.5
 		m_topbar = 172.5
-		// m_e      = 0.000511; unused!
-		// m_mu     = 0.10566; unused!
-		// m_tau    = 1.77686; unused!
 		m_lep    = 0.0
 		m_lepbar = 0.0
 	)
@@ -143,20 +140,7 @@ func Sonnenschein(
 		p_nubar_y = -999.0
 		p_nubar_z = -999.0
 
-		// delta_z = 100000.0
-
 		p_nu_x_close = 100000.0
-
-		// p_nu_x_close_f = -999.0
-		//	p_nu_y_f       = -999.0
-		//	p_nu_z_f       = -999.0
-		//	p_nubar_x_f    = -999.0
-		//	p_nubar_y_f    = -999.0
-		//	p_nubar_z_f    = -999.0
-		//	delta_TOP_mass = 100000.0
-		//	Top_mass_f     = 100000.0
-		//	Topbar_mass_f  = 100000.0
-		//	Top_mass_f_1   = 100000.0
 
 		mtt_val []float64
 	)
@@ -233,11 +217,11 @@ func Sonnenschein(
 				}
 				beam_axis1 = r3.Vec{Z: 1}
 
-				lep_axis        = lep_v_pt_1
-				transe_lep_axis = beam_axis1.Cross(lep_axis)
+				lep_axis   = lep_v_pt_1
+				lep_axis_t = beam_axis1.Cross(lep_axis)
 
-				lepbar_axis        = lepbar_v_pt_1
-				transe_lepbar_axis = beam_axis1.Cross(lepbar_axis)
+				lepbar_axis   = lepbar_v_pt_1
+				lepbar_axis_t = beam_axis1.Cross(lepbar_axis)
 
 				lep_v_pt    = lep_v_pt_1
 				lepbar_v_pt = lepbar_v_pt_1
@@ -261,12 +245,12 @@ func Sonnenschein(
 				case lepIsE:
 					lep_v_pt = lep_v_pt.Rotate(
 						smear_angle_ee_lep,
-						transe_lep_axis,
+						lep_axis_t,
 					)
 				case lepIsMu:
 					lep_v_pt = lep_v_pt.Rotate(
 						smear_angle_mm_lep,
-						transe_lep_axis,
+						lep_axis_t,
 					)
 				}
 			default:
@@ -274,12 +258,12 @@ func Sonnenschein(
 				case lepBarIsE:
 					lepbar_v_pt = lepbar_v_pt.Rotate(
 						smear_angle_ee_lepbar,
-						transe_lepbar_axis,
+						lepbar_axis_t,
 					)
 				case lepBarIsMu:
 					lepbar_v_pt = lepbar_v_pt.Rotate(
 						smear_angle_mm_lepbar,
-						transe_lepbar_axis,
+						lepbar_axis_t,
 					)
 				}
 			}
@@ -359,11 +343,11 @@ func Sonnenschein(
 					Z: jetbar_pt_smear.Pz(),
 				}
 
-				jet_axis        = jet_v_pt_1
-				transe_jet_axis = beam_axis1.Cross(jet_axis)
+				jet_axis   = jet_v_pt_1
+				jet_axis_t = beam_axis1.Cross(jet_axis)
 
-				jetbar_axis        = jetbar_v_pt_1
-				transe_jetbar_axis = beam_axis1.Cross(jetbar_axis)
+				jetbar_axis   = jetbar_v_pt_1
+				jetbar_axis_t = beam_axis1.Cross(jetbar_axis)
 
 				jet_v_pt    = jet_v_pt_1
 				jetbar_v_pt = jetbar_v_pt_1
@@ -377,8 +361,8 @@ func Sonnenschein(
 				smear_angle_jetbar = smearHs.ThetaJetBar.Rand()
 			}
 
-			jet_v_pt = jet_v_pt.Rotate(smear_angle_jet, transe_jet_axis)
-			jetbar_v_pt = jetbar_v_pt.Rotate(smear_angle_jetbar, transe_jetbar_axis)
+			jet_v_pt = jet_v_pt.Rotate(smear_angle_jet, jet_axis_t)
+			jetbar_v_pt = jetbar_v_pt.Rotate(smear_angle_jetbar, jetbar_axis_t)
 
 			jet_v_pt = jet_v_pt.Rotate(rnd.Float64()*2*math.Pi, jet_v_pt_1)
 			jetbar_v_pt = jetbar_v_pt.Rotate(rnd.Float64()*2*math.Pi, jetbar_v_pt_1)
@@ -664,13 +648,9 @@ func Sonnenschein(
 			}
 
 			var (
-				// FIXME?
-				// top_p_i    = r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz}
-				// topbar_p_i = r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
-
 				binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
+				binx2 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
 
-				binx2       = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
 				weight_s_i1 float64
 				weight_s_i2 float64
 			)
