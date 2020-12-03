@@ -98,36 +98,38 @@ func main() {
 		var j1P, j2P lv.FourVec
 		j1P = lv.NewFourVecPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[1]), float64(jetE[0]))
 		j2P = lv.NewFourVecPtEtaPhiE(float64(jetPt[1]), float64(jetEta[1]), float64(jetPhi[1]), float64(jetE[1]))
-		j1b, j2b := 0, 0
-		if jetMV2c10[0] > 0.691 {
-			j1b = 1
-		}
-		if jetMV2c10[1] > 0.691 {
-			j2b = 1
-		}
+		var (
+			j1b = jetMV2c10[0] > 0.691
+			j2b = jetMV2c10[1] > 0.691
+		)
 
 		// Prepare missing transverse energy component
-		Etx := float64(metMet) * math.Cos(float64(metPhi))
-		Ety := float64(metMet) * math.Sin(float64(metPhi))
+		sin, cos := math.Sincos(float64(metPhi))
+		Etx := float64(metMet) * cos
+		Ety := float64(metMet) * sin
 
 		// Call the Sonnenschein reconstruction
-		tops := sonn.RecoTops(
+		reco := sonn.RecoTops
+		if false {
+			reco = sonn.Sonnenschein
+		}
+		tops := reco(
 			fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
 			fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
-			Etx, Ety,
+			Etx, Ety, sh,
 		)
 		var xtops []fmom.PxPyPzE
 		if true {
 			xtops = sonn.Sonnenschein(
 				fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
-				fmomP4from(j1P), fmomP4from(j2P), int2bool(j1b), int2bool(j2b),
+				fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
 				Etx, Ety, sh,
 			)
 		}
 
 		bad := false
 		// Keep track of not reconstructed events
-		if isBad(tops[0]) || isBad(tops[1]) {
+		if len(tops) == 0 || isBad(tops[0]) || isBad(tops[1]) {
 			nBad++
 			bad = true
 		}
@@ -170,11 +172,4 @@ func isBad(t fmom.PxPyPzE) bool {
 	isDefault := t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
 	isEmpty := t.Px() == 0. && t.Py() == 0. && t.Pz() == 0.
 	return isDefault || isEmpty
-}
-
-func int2bool(v int) bool {
-	if v != 0 {
-		return true
-	}
-	return false
 }

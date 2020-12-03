@@ -12,9 +12,9 @@ import (
 
 func RecoTops(
 	lep, lepbar fmom.P4, pdgIDLep, pdgIDLepBar int,
-	jet, jetbar fmom.P4, isbJet, isbJetbar int,
+	jet, jetbar fmom.P4, isbJet, isbJetbar bool,
 	emissx, emissy float64,
-
+	smearHs *SmearingHistos,
 ) []fmom.PxPyPzE {
 
 	var (
@@ -46,7 +46,7 @@ func RecoTops(
 
 	out := C.sonn(
 		tlvLep, tlvLepBar, C.int(pdgIDLep), C.int(pdgIDLepBar),
-		tlvJet, tlvJetBar, C.int(isbJet), C.int(isbJetbar),
+		tlvJet, tlvJetBar, bool2int(isbJet), bool2int(isbJetbar),
 		C.double(emissx), C.double(emissy),
 	)
 	defer C.free(unsafe.Pointer(out.tlvs))
@@ -69,4 +69,11 @@ func SetupSmearingFile(fname string) {
 	cname := C.CString(fname)
 	defer C.free(unsafe.Pointer(cname))
 	C.load_smearing_histos(cname)
+}
+
+func bool2int(v bool) C.int {
+	if v {
+		return 1
+	}
+	return 0
 }
