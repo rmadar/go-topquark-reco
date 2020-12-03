@@ -70,8 +70,8 @@ func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
 }
 
 func Sonnenschein(
-	lepTLV, lepbarTLV fmom.P4, pdgIDLep, pdgIDLepBar int,
-	jetTLV, jetbarTLV fmom.P4, isbJet, isbJetbar bool,
+	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
+	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64,
 	smearHs *SmearingHistos,
 ) []fmom.PxPyPzE {
@@ -86,9 +86,10 @@ func Sonnenschein(
 		Nsmear = 1
 	}
 
+	tops := make([]fmom.PxPyPzE, 2)
 	// run the reconstruction only if the two jets are btags.
 	if !isbJet || !isbJetbar {
-		return nil
+		return tops
 	}
 
 	var (
@@ -185,22 +186,22 @@ func Sonnenschein(
 				}
 			}
 
-			lepbar_pt_smear = newPtEtaPhiM(
+			lepbar_pt_smear.SetPtEtaPhiM(
 				lepbarTLV.Pt()*smear_scale_0,
 				lepbarTLV.Eta(),
 				lepbarTLV.Phi(),
 				m_lepbar,
 			)
 
-			lep_pt_smear = newPtEtaPhiM(
+			lep_pt_smear.SetPtEtaPhiM(
 				lepTLV.Pt()*smear_scale_1,
 				lepTLV.Eta(),
 				lepTLV.Phi(),
 				m_lepbar,
 			)
 
-			lepbar_nosmear.Set(lepbarTLV)
-			lep_nosmear.Set(lepTLV)
+			lepbar_nosmear = lepbarTLV
+			lep_nosmear = lepTLV
 
 			// let's define the axis transverse to lepton momentum
 			// for theta smearing accounting.
@@ -293,40 +294,40 @@ func Sonnenschein(
 
 			switch i_jets {
 			case 0:
-				jetbar_pt_smear = newPtEtaPhiE(
+				jetbar_pt_smear.SetPtEtaPhiE(
 					jetbarTLV.Pt()*smear_scale_jet_0,
 					jetbarTLV.Eta(),
 					jetbarTLV.Phi(),
 					jetbarTLV.E(),
 				)
 
-				jet_pt_smear = newPtEtaPhiE(
+				jet_pt_smear.SetPtEtaPhiE(
 					jetTLV.Pt()*smear_scale_jet_1,
 					jetTLV.Eta(),
 					jetTLV.Phi(),
 					jetTLV.E(),
 				)
 
-				jetbar_nosmear.Set(jetbarTLV)
-				jet_nosmear.Set(jetTLV)
+				jetbar_nosmear = jetbarTLV
+				jet_nosmear = jetTLV
 
 			case 1:
-				jetbar_pt_smear = newPtEtaPhiE(
+				jetbar_pt_smear.SetPtEtaPhiE(
 					jetTLV.Pt()*smear_scale_jet_0,
 					jetTLV.Eta(),
 					jetTLV.Phi(),
 					jetTLV.E(),
 				)
 
-				jet_pt_smear = newPtEtaPhiE(
+				jet_pt_smear.SetPtEtaPhiE(
 					jetbarTLV.Pt()*smear_scale_jet_1,
 					jetbarTLV.Eta(),
 					jetbarTLV.Phi(),
 					jetbarTLV.E(),
 				)
 
-				jetbar_nosmear.Set(jetTLV)
-				jet_nosmear.Set(jetbarTLV)
+				jetbar_nosmear = jetTLV
+				jet_nosmear = jetbarTLV
 			}
 
 			// let's define the transverse axis to the jet momentum
@@ -709,7 +710,7 @@ func Sonnenschein(
 
 	// check whether we found a useful solution
 	if i_analyzed_event != 1 || len(weights_com) == 0 {
-		return nil
+		return tops
 	}
 
 	if debug {
@@ -761,7 +762,7 @@ func Sonnenschein(
 	}
 
 	if i_weight_sel == 0 {
-		return nil
+		return tops
 	}
 
 	var (
@@ -770,12 +771,12 @@ func Sonnenschein(
 
 		Top_fin_E    = math.Sqrt(r3.Norm2(top_p_sum) + Top_fin_M*Top_fin_M)
 		Topbar_fin_E = math.Sqrt(r3.Norm2(topbar_p_sum) + Topbar_fin_M*Topbar_fin_M)
-
-		Top_fin    = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
-		Topbar_fin = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
 	)
 
-	return []fmom.PxPyPzE{Top_fin, Topbar_fin}
+	tops[0] = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
+	tops[1] = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
+
+	return tops
 }
 
 func iabs(i int) int {
@@ -783,22 +784,4 @@ func iabs(i int) int {
 		return -i
 	}
 	return i
-}
-
-func newPtEtaPhiM(pt, eta, phi, m float64) fmom.PxPyPzE {
-	var (
-		p = fmom.NewPtEtaPhiM(pt, eta, phi, m)
-		o fmom.PxPyPzE
-	)
-	o.Set(&p)
-	return o
-}
-
-func newPtEtaPhiE(pt, eta, phi, e float64) fmom.PxPyPzE {
-	pt = math.Abs(pt)
-	sin, cos := math.Sincos(phi)
-	return fmom.NewPxPyPzE(
-		pt*cos, pt*sin, pt*math.Sinh(eta),
-		e,
-	)
 }
