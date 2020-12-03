@@ -71,8 +71,6 @@ func main() {
 	defer r.Close()
 
 	// Load smearing histograms
-	sonn.SetupSmearingFile("../testdata/smearingHistos.root")
-
 	sh, err := sonn.NewSmearingHistos("../testdata/smearingHistos.root", 1234)
 	if err != nil {
 		log.Fatalf("could not load smearing histos: %+v", err)
@@ -82,22 +80,29 @@ func main() {
 	err = r.Read(func(ctx rtree.RCtx) error {
 
 		// Prepare leptons four vectors
-		var lP, lbarP lv.FourVec
-		var lId, lbarId int
+		var (
+			lep0 fmom.PxPyPzE
+			lep1 fmom.PxPyPzE
+			jet0 fmom.PxPyPzE
+			jet1 fmom.PxPyPzE
+
+			lid0 int
+			lid1 int
+		)
+
 		for i, id := range lepPid {
 			if id > 0 {
-				lbarId = int(id)
-				lbarP = lv.NewFourVecPtEtaPhiM(float64(lepPt[i]), float64(lepEta[i]), float64(lepPhi[i]), 0.0)
+				lid1 = int(id)
+				lep1.SetPtEtaPhiM(float64(lepPt[i]), float64(lepEta[i]), float64(lepPhi[i]), 0.0)
 			} else {
-				lId = int(id)
-				lP = lv.NewFourVecPtEtaPhiM(float64(lepPt[i]), float64(lepEta[i]), float64(lepPhi[i]), 0.0)
+				lid0 = int(id)
+				lep0.SetPtEtaPhiM(float64(lepPt[i]), float64(lepEta[i]), float64(lepPhi[i]), 0.0)
 			}
 		}
 
 		// Prepare jet four vectors and b-tagg info based on the 2 leading jets
-		var j1P, j2P lv.FourVec
-		j1P = lv.NewFourVecPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[1]), float64(jetE[0]))
-		j2P = lv.NewFourVecPtEtaPhiE(float64(jetPt[1]), float64(jetEta[1]), float64(jetPhi[1]), float64(jetE[1]))
+		jet0.SetPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[1]), float64(jetE[0]))
+		jet1.SetPtEtaPhiE(float64(jetPt[1]), float64(jetEta[1]), float64(jetPhi[1]), float64(jetE[1]))
 		var (
 			j1b = jetMV2c10[0] > 0.691
 			j2b = jetMV2c10[1] > 0.691
@@ -109,45 +114,26 @@ func main() {
 		Ety := float64(metMet) * sin
 
 		// Call the Sonnenschein reconstruction
-		reco := sonn.RecoTops
-		if false {
-			reco = sonn.Sonnenschein
-		}
-		tops := reco(
-			fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
-			fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
+		tops := sonn.Sonnenschein(
+			lep0, lep1, lid0, lid1,
+			jet0, jet1, j1b, j2b,
 			Etx, Ety, sh,
 		)
-		var xtops []fmom.PxPyPzE
-		if true {
-			xtops = sonn.Sonnenschein(
-				fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
-				fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
-				Etx, Ety, sh,
-			)
-		}
 
-		bad := false
 		// Keep track of not reconstructed events
-		if len(tops) == 0 || isBad(tops[0]) || isBad(tops[1]) {
+		if isBad(tops[0]) || isBad(tops[1]) {
 			nBad++
-			bad = true
 		}
 
 		// Print some information
-		fmt.Printf("Entry %d: n-bad=%d\n", ctx.Entry, nBad)
+		fmt.Printf("Entry %d:\n", ctx.Entry)
 		fmt.Printf("   - Evt number   %v\n", evtNum)
 		fmt.Printf("   - N[b-jets]    %v\n", nBjets)
 		fmt.Printf("   - final state  %v\n", lepPid)
-		fmt.Printf("   - P4[l]        %v\n", fmomP4from(lP))
-		fmt.Printf("   - P4[lbar]     %v\n", fmomP4from(lbarP))
+		fmt.Printf("   - P4[l]        %v\n", lep0)
+		fmt.Printf("   - P4[lbar]     %v\n", lep1)
 		fmt.Printf("   - P4[top]      %v\n", tops[0])
 		fmt.Printf("   - P4[anti-top] %v\n", tops[1])
-		fmt.Printf("   + bad=         %v\n", bad)
-		if len(xtops) > 0 {
-			fmt.Printf("   + P4[top]      %v\n", xtops[0])
-			fmt.Printf("   + P4[anti-top] %v\n", xtops[1])
-		}
 		fmt.Printf("\n")
 
 		return nil
