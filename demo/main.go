@@ -116,11 +116,14 @@ func main() {
 			fmomP4from(j1P), fmomP4from(j2P), j1b, j2b,
 			Etx, Ety,
 		)
-		xtops := sonn.Sonnenschein(
-			fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
-			fmomP4from(j1P), fmomP4from(j2P), int2bool(j1b), int2bool(j2b),
-			Etx, Ety, sh,
-		)
+		var xtops []fmom.PxPyPzE
+		if true {
+			xtops = sonn.Sonnenschein(
+				fmomP4from(lP), fmomP4from(lbarP), lId, lbarId,
+				fmomP4from(j1P), fmomP4from(j2P), int2bool(j1b), int2bool(j2b),
+				Etx, Ety, sh,
+			)
+		}
 
 		bad := false
 		// Keep track of not reconstructed events
