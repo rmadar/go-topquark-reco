@@ -21,6 +21,9 @@ import (
 type Sonnenschein struct {
 	smearer *smearingHistos
 	rnd     *rand.Rand
+	doSmear bool
+	nSmear  int
+	debug   bool
 }
 
 // New returns a new Sonnenschein builder from the path to a ROOT file holding
@@ -34,6 +37,9 @@ func New(fname string, seed uint64) (*Sonnenschein, error) {
 	return &Sonnenschein{
 		smearer: sh,
 		rnd:     rand.New(rand.NewSource(seed)),
+		doSmear: true,
+		nSmear:  10,
+		debug:   true,
 	}, nil
 }
 
@@ -100,20 +106,14 @@ func (sonn *Sonnenschein) Build(
 	emissx, emissy float64,
 ) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
 
-	// debug.
-	const debug = true
-
+	// Configuration variables
 	var (
 		smearHs = sonn.smearer
 		rnd     = sonn.rnd
+		debug   = sonn.debug
+		doSmear = sonn.doSmear
+		nSmear  = sonn.nSmear
 	)
-
-	// Smearing parameters
-	var Nsmear = 10
-	const applySmearing = true
-	if !applySmearing {
-		Nsmear = 1
-	}
 
 	// Ouptut of the algorithm
 	var (
@@ -192,7 +192,7 @@ func (sonn *Sonnenschein) Build(
 		}
 
 		nIterations := 0
-		for i_smear := 0; i_smear < Nsmear; i_smear++ {
+		for i_smear := 0; i_smear < nSmear; i_smear++ {
 			var (
 				smear_scale_0     = 1.0
 				smear_scale_1     = 1.0
@@ -200,7 +200,7 @@ func (sonn *Sonnenschein) Build(
 				smear_scale_jet_1 = 1.0
 			)
 
-			if applySmearing {
+			if doSmear {
 				switch {
 				case lepIsE:
 					smear_scale_0 = smearHs.PtLepEE.Rand()
@@ -267,7 +267,7 @@ func (sonn *Sonnenschein) Build(
 				smear_angle_mm_lepbar = 0.0
 			)
 
-			if applySmearing {
+			if doSmear {
 				smear_angle_ee_lep = smearHs.ThetaLepEE.Rand()
 				smear_angle_ee_lepbar = smearHs.ThetaLepEE.Rand()
 				smear_angle_mm_lep = smearHs.ThetaLepMu.Rand()
@@ -321,7 +321,7 @@ func (sonn *Sonnenschein) Build(
 				lepbar_pt_smear.E(),
 			)
 
-			if applySmearing {
+			if doSmear {
 				smear_scale_jet_0 = smearHs.PtJet.Rand()
 				smear_scale_jet_1 = smearHs.PtJet.Rand()
 			}
@@ -391,7 +391,7 @@ func (sonn *Sonnenschein) Build(
 				smear_angle_jetbar = 0.0
 			)
 
-			if applySmearing {
+			if doSmear {
 				smear_angle_jet = smearHs.ThetaJet.Rand()
 				smear_angle_jetbar = smearHs.ThetaJetBar.Rand()
 			}
