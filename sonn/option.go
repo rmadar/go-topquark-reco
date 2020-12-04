@@ -24,7 +24,7 @@ func newConfig() *config {
 }
 
 // WithRndSeed sets the seed for random number
-// generations used in the smearing.
+// generations used in the smearing. Default is 1234
 func WithRndSeed(s uint64) Option {
 	return func(cfg *config) {
 		cfg.rndseed = s
@@ -33,7 +33,7 @@ func WithRndSeed(s uint64) Option {
 
 // WithSmearing enables smearing of kinematics
 // Default number of iteration is 10, but can be changed
-// using WithNsmearing(n) function.
+// using WithNsmearing(n) function. Default is true.
 func WithSmearing(d bool) Option {
 	return func(cfg *config) {
 		cfg.debug = d
@@ -41,14 +41,15 @@ func WithSmearing(d bool) Option {
 }
 
 // WithNsmearing sets the number of iteration used in the
-// smearing of the kinematics.
+// smearing of the kinematics. Default is 10.
 func WithNsmearing(n int) Option {
 	return func(cfg *config) {
 		cfg.nSmear = n
 	}
 }
 
-// WithDebug enables debugging print messages
+// WithDebug enables debugging print messages.
+// Default is false.
 func WithDebug(d bool) Option {
 	return func(cfg *config) {
 		cfg.debug = d
