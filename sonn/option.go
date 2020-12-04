@@ -6,6 +6,7 @@ type Option func(cfg *config)
 
 // config contains all the possible options and their values.
 type config struct {
+	rndseed uint64  
 	doSmear bool
 	nSmear  int
 	debug   bool
@@ -14,6 +15,7 @@ type config struct {
 // newConfig returns a config type with a set of default options.
 func newConfig() *config {
 	cfg := &config{
+		rndseed: 1234,
 		doSmear: true,
 		nSmear:  10,
 		debug:   false,
@@ -21,10 +23,11 @@ func newConfig() *config {
 	return cfg
 }
 
-// WithDebug enables debugging print messages
-func WithDebug(d bool) Option {
+// WithRndSeed sets the seed for random number
+// generations used in the smearing.
+func WithRndSeed(s uint64) Option {
 	return func(cfg *config) {
-		cfg.debug = d
+		cfg.rndseed = s
 	}
 }
 
@@ -42,5 +45,12 @@ func WithSmearing(d bool) Option {
 func WithNsmearing(n int) Option {
 	return func(cfg *config) {
 		cfg.nSmear = n
+	}
+}
+
+// WithDebug enables debugging print messages
+func WithDebug(d bool) Option {
+	return func(cfg *config) {
+		cfg.debug = d
 	}
 }

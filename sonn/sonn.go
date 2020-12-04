@@ -28,13 +28,7 @@ type Sonnenschein struct {
 
 // New returns a new Sonnenschein builder from the path to a ROOT file holding
 // histograms used to smear 4-vectors, and a seed for the PRNG.
-func New(fname string, seed uint64, opts ...Option) (*Sonnenschein, error) {
-
-	// Get smearing histograms
-	sh, err := newSmearingHistos(fname, seed)
-	if err != nil {
-		return nil, fmt.Errorf("could not create smearing histograms: %w", err)
-	}
+func New(fname string, opts ...Option) (*Sonnenschein, error) {
 
 	// Configuration of the reconstruction
 	cfg := newConfig()
@@ -42,10 +36,16 @@ func New(fname string, seed uint64, opts ...Option) (*Sonnenschein, error) {
 		opt(cfg)
 	}
 	
+	// Get smearing histograms
+	sh, err := newSmearingHistos(fname, cfg.rndseed)
+	if err != nil {
+		return nil, fmt.Errorf("could not create smearing histograms: %w", err)
+	}
+	
 	// Return the reconstruction object
 	return &Sonnenschein{
 		smearer: sh,
-		rnd:     rand.New(rand.NewSource(seed)),
+		rnd:     rand.New(rand.NewSource(cfg.rndseed)),
 		doSmear: cfg.doSmear,
 		nSmear:  cfg.nSmear,
 		debug:   cfg.debug,

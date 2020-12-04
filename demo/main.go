@@ -70,7 +70,7 @@ func main() {
 	defer r.Close()
 
 	// create a Sonnenschein reco algorithm.
-	rec, err := sonn.New("../testdata/smearingHistos.root", 1234)
+	rec, err := sonn.New("../testdata/smearingHistos.root", sonn.WithDebug(true))
 	if err != nil {
 		log.Fatalf("could not create the Sonnenschein reco algorithm: %+v", err)
 	}
@@ -113,14 +113,14 @@ func main() {
 		Ety := float64(metMet) * sin
 
 		// Call the Sonnenschein reconstruction
-		tops := rec.Build(
+		t, tbar, status := rec.Build(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
-
+		
 		// Keep track of not reconstructed events
-		if isBad(tops[0]) || isBad(tops[1]) {
+		if status == 0 {
 			nBad++
 		}
 
@@ -131,8 +131,8 @@ func main() {
 		fmt.Printf("   - final state  %v\n", lepPid)
 		fmt.Printf("   - P4[l]        %v\n", lep0)
 		fmt.Printf("   - P4[lbar]     %v\n", lep1)
-		fmt.Printf("   - P4[top]      %v\n", tops[0])
-		fmt.Printf("   - P4[anti-top] %v\n", tops[1])
+		fmt.Printf("   - P4[top]      %v\n", t   )
+		fmt.Printf("   - P4[anti-top] %v\n", tbar)
 		fmt.Printf("\n")
 
 		return nil
