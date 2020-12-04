@@ -41,7 +41,12 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create smearing histograms: %w", err)
 	}
-	
+
+	// Set only one iteration if no smearing
+	if !cfg.doSmear {
+		cfg.nSmear = 1
+	}
+
 	// Return the reconstruction object
 	return &Sonnenschein{
 		smearer: sh,
@@ -454,7 +459,7 @@ func (sonn *Sonnenschein) Build(
 				(jet_nosmear.Py() - jet.Py()) +
 				(jetbar_nosmear.Py() - jetbar.Py())
 
-			if debug {
+			if debug && doSmear {
 				log.Printf("  Smearing iteration %d:", i_smear)
 				log.Printf("   Lepton scale smearing: %g, %g", smear_scale_0, smear_scale_1)
 				log.Printf("   Lepton angle smearing: %g, %g, %g, %g",
@@ -737,7 +742,7 @@ func (sonn *Sonnenschein) Build(
 		}
 
 		if debug {
-			log.Printf(" Number of iteration with solutions : %d", nIterations)
+			log.Printf("   number of iteration with solutions : %d", nIterations)
 		}
 
 		weights_com = append(weights_com, weight_s_sum)
@@ -823,6 +828,11 @@ func (sonn *Sonnenschein) Build(
 	// Status of the reconstruction
 	if !isBad(tFinal) && !isBad(tbarFinal) {
 		status = 1
+	}
+
+	if debug {
+		log.Printf(" P[t]   : %v, M=%v", tFinal, tFinal.M())
+		log.Printf(" P[tbar]: %v, M=%v", tbarFinal, tbarFinal.M())
 	}
 
 	// Return the results
