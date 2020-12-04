@@ -36,7 +36,7 @@ func WithRndSeed(s uint64) Option {
 // using WithNsmearing(n) function. Default is true.
 func WithSmearing(d bool) Option {
 	return func(cfg *config) {
-		cfg.debug = d
+		cfg.doSmear = d
 	}
 }
 
