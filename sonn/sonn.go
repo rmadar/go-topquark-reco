@@ -91,11 +91,14 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 	return sh, err
 }
 
+// Build perform the reconstruction and return 2 4-momentum
+// (top and anti-top) as well as a status of the reconstruction.
+// Status = 1 (0) means the reconstruction (didn't) work.
 func (sonn *Sonnenschein) Build(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64,
-) []fmom.PxPyPzE {
+) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
 
 	// debug.
 	const debug = true
@@ -112,10 +115,16 @@ func (sonn *Sonnenschein) Build(
 		Nsmear = 1
 	}
 
-	tops := make([]fmom.PxPyPzE, 2)
+	// Ouptut of the algorithm
+	var (
+		tFinal    fmom.PxPyPzE
+		tbarFinal fmom.PxPyPzE
+		status = 0
+	)
+
 	// run the reconstruction only if the two jets are btags.
 	if !isbJet || !isbJetbar {
-		return tops
+		return tFinal, tbarFinal, status
 	}
 
 	var (
@@ -735,7 +744,7 @@ func (sonn *Sonnenschein) Build(
 
 	// check whether we found a useful solution
 	if i_analyzed_event != 1 || len(weights_com) == 0 {
-		return tops
+		return tFinal, tbarFinal, status
 	}
 
 	if debug {
@@ -787,7 +796,7 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	if i_weight_sel == 0 {
-		return tops
+		return tFinal, tbarFinal, status
 	}
 
 	var (
@@ -798,15 +807,30 @@ func (sonn *Sonnenschein) Build(
 		Topbar_fin_E = math.Sqrt(r3.Norm2(topbar_p_sum) + Topbar_fin_M*Topbar_fin_M)
 	)
 
-	tops[0] = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
-	tops[1] = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
+	// Final reconstructed tops
+	tFinal = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
+	tbarFinal = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
 
-	return tops
+	// Status of the reconstruction
+	if !isBad(tFinal) && !isBad(tbarFinal) {
+		status = 1
+	}
+
+	// Return the results
+	return tFinal, tbarFinal, status
 }
 
+// Helper function returning the absolute value of an int.
 func iabs(i int) int {
 	if i < 0 {
 		return -i
 	}
 	return i
+}
+
+// Helper function checking of the P4[top] makes sense.
+func isBad(t fmom.PxPyPzE) bool {
+	isDefault := t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
+	isEmpty := t.Px() == 0. && t.Py() == 0. && t.Pz() == 0.
+	return isDefault || isEmpty
 }
