@@ -15,8 +15,30 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
-// SmearingHistos holds the histograms used to smear 4-vectors.
-type SmearingHistos struct {
+// Sonnenschein reconstructs ttbar pairs using the Sonnenschein method
+// as described in:
+//  https://arxiv.org/abs/hep-ph/0603011
+type Sonnenschein struct {
+	smearer *smearingHistos
+	rnd     *rand.Rand
+}
+
+// New returns a new Sonnenschein builder from the path to a ROOT file holding
+// histograms used to smear 4-vectors, and a seed for the PRNG.
+func New(fname string, seed uint64) (*Sonnenschein, error) {
+	sh, err := newSmearingHistos(fname, seed)
+	if err != nil {
+		return nil, fmt.Errorf("could not create smearing histograms: %w", err)
+	}
+
+	return &Sonnenschein{
+		smearer: sh,
+		rnd:     rand.New(rand.NewSource(seed)),
+	}, nil
+}
+
+// smearingHistos holds the histograms used to smear 4-vectors.
+type smearingHistos struct {
 	PtLepEE    hbook.Rand1D
 	PtLepMu    hbook.Rand1D
 	ThetaLepEE hbook.Rand1D
@@ -31,7 +53,7 @@ type SmearingHistos struct {
 
 // NewSmearingHistos returns a set of smearing histograms from the provided
 // ROOT file name and a seed for the histogram distributions.
-func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
+func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 	f, err := groot.Open(fname)
 	if err != nil {
 		return nil, fmt.Errorf("could not open ROOT file %q: %w", fname, err)
@@ -55,7 +77,7 @@ func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
 		return hbook.NewRand1D(h, rand.NewSource(seed))
 	}
 
-	sh := &SmearingHistos{
+	sh := &smearingHistos{
 		PtLepEE:     gethr("h_pT_lep_ee_smear"),
 		PtLepMu:     gethr("h_pT_lep_mm_smear"),
 		Mlblb:       get("mlblb_smear"),
@@ -69,15 +91,19 @@ func NewSmearingHistos(fname string, seed uint64) (*SmearingHistos, error) {
 	return sh, err
 }
 
-func Sonnenschein(
+func (sonn *Sonnenschein) Build(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64,
-	smearHs *SmearingHistos,
 ) []fmom.PxPyPzE {
 
 	// debug.
 	const debug = true
+
+	var (
+		smearHs = sonn.smearer
+		rnd     = sonn.rnd
+	)
 
 	// Smearing parameters
 	var Nsmear = 10
@@ -150,7 +176,6 @@ func Sonnenschein(
 	for i_jets := 0; i_jets < 2; i_jets++ {
 		var (
 			weight_s_sum float64
-			rnd          = rand.New(rand.NewSource(1))
 		)
 
 		if debug {

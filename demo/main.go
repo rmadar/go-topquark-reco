@@ -69,10 +69,10 @@ func main() {
 	}
 	defer r.Close()
 
-	// Load smearing histograms
-	sh, err := sonn.NewSmearingHistos("../testdata/smearingHistos.root", 1234)
+	// create a Sonnenschein reco algorithm.
+	rec, err := sonn.New("../testdata/smearingHistos.root", 1234)
 	if err != nil {
-		log.Fatalf("could not load smearing histos: %+v", err)
+		log.Fatalf("could not create the Sonnenschein reco algorithm: %+v", err)
 	}
 
 	// Event loop
@@ -113,10 +113,10 @@ func main() {
 		Ety := float64(metMet) * sin
 
 		// Call the Sonnenschein reconstruction
-		tops := sonn.Sonnenschein(
+		tops := rec.Build(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
-			Etx, Ety, sh,
+			Etx, Ety,
 		)
 
 		// Keep track of not reconstructed events
