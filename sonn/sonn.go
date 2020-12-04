@@ -748,7 +748,7 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	if debug {
-		log.Printf(" Weight sum of jet combinatorics (0, 1): %, %g", weights_com[0], weights_com[1])
+		log.Printf(" Weight sum of jet combinatorics (0, 1): %g, %g", weights_com[0], weights_com[1])
 	}
 
 	var (
