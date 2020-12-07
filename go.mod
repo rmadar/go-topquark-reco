@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	go-hep.org/x/exp v0.7.1
-	go-hep.org/x/hep v0.28.4-0.20201203150704-9a1d24de83c8
+	go-hep.org/x/hep v0.28.4-0.20201207112512-262cb50455c1
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	gonum.org/v1/gonum v0.8.2
 )

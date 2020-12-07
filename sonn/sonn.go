@@ -255,16 +255,8 @@ func (sonn *Sonnenschein) Build(
 			// let's define the axis transverse to lepton momentum
 			// for theta smearing accounting.
 			var (
-				lep_v_pt_1 = r3.Vec{
-					X: lep_pt_smear.Px(),
-					Y: lep_pt_smear.Py(),
-					Z: lep_pt_smear.Pz(),
-				}
-				lepbar_v_pt_1 = r3.Vec{
-					X: lepbar_pt_smear.Px(),
-					Y: lepbar_pt_smear.Py(),
-					Z: lepbar_pt_smear.Pz(),
-				}
+				lep_v_pt_1 = fmom.VecOf(&lep_pt_smear)
+				lepbar_v_pt_1 = fmom.VecOf(&lepbar_pt_smear)
 				beam_axis1 = r3.Vec{Z: 1}
 
 				lep_axis   = lep_v_pt_1
@@ -382,16 +374,8 @@ func (sonn *Sonnenschein) Build(
 			// let's define the transverse axis to the jet momentum
 			// for theta smearing accounting.
 			var (
-				jet_v_pt_1 = r3.Vec{
-					X: jet_pt_smear.Px(),
-					Y: jet_pt_smear.Py(),
-					Z: jet_pt_smear.Pz(),
-				}
-				jetbar_v_pt_1 = r3.Vec{
-					X: jetbar_pt_smear.Px(),
-					Y: jetbar_pt_smear.Py(),
-					Z: jetbar_pt_smear.Pz(),
-				}
+				jet_v_pt_1 = fmom.VecOf(&jet_pt_smear)
+				jetbar_v_pt_1 = fmom.VecOf(&jetbar_pt_smear)
 
 				jet_axis   = jet_v_pt_1
 				jet_axis_t = beam_axis1.Cross(jet_axis)
@@ -438,10 +422,10 @@ func (sonn *Sonnenschein) Build(
 			mlbbar.Set(fmom.Add(&lep, &jetbar))
 
 			var (
-				jet_v    = r3.Vec{X: jet.Px(), Y: jet.Py(), Z: jet.Pz()}
-				lep_v    = r3.Vec{X: lep.Px(), Y: lep.Py(), Z: lep.Pz()}
-				jetbar_v = r3.Vec{X: jetbar.Px(), Y: jetbar.Py(), Z: jetbar.Pz()}
-				lepbar_v = r3.Vec{X: lepbar.Px(), Y: lepbar.Py(), Z: lepbar.Pz()}
+				jet_v    = fmom.VecOf(&jet)
+				lep_v    = fmom.VecOf(&lep)
+				jetbar_v = fmom.VecOf(&jetbar)
+				lepbar_v = fmom.VecOf(&lepbar)
 
 				Emiss_x_nosmear = emissx
 				Emiss_y_nosmear = emissy
