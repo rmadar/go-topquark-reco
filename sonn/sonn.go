@@ -114,6 +114,7 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 // Build perform the reconstruction and return 2 4-momentum
 // (top and anti-top) as well as a status of the reconstruction.
 // Status = 1 (0) means the reconstruction (didn't) work.
+// Four-momemtum and missing Et components are in GeV.
 func (sonn *Sonnenschein) Build(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
