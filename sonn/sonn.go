@@ -115,11 +115,26 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 // (top and anti-top) as well as a status of the reconstruction.
 // Status = 1 (0) means the reconstruction (didn't) work.
 // Four-momemtum and missing Et components are in GeV.
+// rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
+// If rndNumbers is not empty, smearing is automatically activated
+// for this function call. When several tuples are passed, the
+// number of smearing iteration is set to be number of tuples,
+// ie len(rdnNumbers). The meaning of random numbers is the following:
+//   rdn[12] = [12]float64{
+//     scaleLep , scaleLepBar ,
+//     thetaLep , thetaLepBar ,
+//     azimuLep , azimuLepBar ,
+//     scaleJet0, scaleJet0Bar, 
+//     thetaJet0, thetaJet0Bar,
+//     azimuJet0, azimuJet0Bar,
+//     scaleJet1, scaleJet1Bar,
+//     thetaJet1, thetaJet1Bar,
+//     azimuJet1, azimuJet1Bar,
+//   }
 func (sonn *Sonnenschein) Build(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
-	emissx, emissy float64,
-) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
+	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
 
 	// Configuration variables
 	var (
@@ -128,7 +143,15 @@ func (sonn *Sonnenschein) Build(
 		debug   = sonn.debug
 		doSmear = sonn.doSmear
 		nSmear  = sonn.nSmear
+		usrRndN = false
 	)
+
+	// Overwrite configuration for user-defined rnd numbers
+	if len(rdnNumbers) > 0 {
+		usrRndN = true
+		doSmear = true
+		nSmear  = len(rdnNumbers)
+	}
 
 	// Ouptut of the algorithm
 	var (
@@ -208,49 +231,66 @@ func (sonn *Sonnenschein) Build(
 
 		nIterations := 0
 		for i_smear := 0; i_smear < nSmear; i_smear++ {
+
+			// All smearing variables
 			var (
-				smear_scale_0     = 1.0
-				smear_scale_1     = 1.0
+				smear_scale_lep_0 = 1.0
+				smear_scale_lep_1 = 1.0
+				smear_theta_lep_0 = 0.0
+				smear_theta_lep_1 = 0.0
+				smear_azimu_lep_0 = 0.0
+				smear_azimu_lep_1 = 0.0
 				smear_scale_jet_0 = 1.0
 				smear_scale_jet_1 = 1.0
+				smear_theta_jet_0 = 0.0
+				smear_theta_jet_1 = 0.0
+				smear_azimu_jet_0 = 0.0
+				smear_azimu_jet_1 = 0.0
 			)
 
 			if doSmear {
 				switch {
 				case lepIsE:
-					smear_scale_0 = smearHs.PtLepEE.Rand()
+					smear_scale_lep_0 = smearHs.PtLepEE.Rand()
 				case lepIsMu:
-					smear_scale_0 = smearHs.PtLepMu.Rand()
+					smear_scale_lep_0 = smearHs.PtLepMu.Rand()
 				default:
-					smear_scale_0 = 1
+					smear_scale_lep_0 = 1
 				}
 
 				switch {
 				case lepBarIsE:
-					smear_scale_1 = smearHs.PtLepEE.Rand()
+					smear_scale_lep_1 = smearHs.PtLepEE.Rand()
 				case lepBarIsMu:
-					smear_scale_1 = smearHs.PtLepMu.Rand()
+					smear_scale_lep_1 = smearHs.PtLepMu.Rand()
 				default:
-					smear_scale_1 = 1
+					smear_scale_lep_1 = 1
 				}
 			}
 
-			lepbar_pt_smear.SetPtEtaPhiM(
-				lepbarTLV.Pt()*smear_scale_0,
-				lepbarTLV.Eta(),
-				lepbarTLV.Phi(),
-				m_lepbar,
-			)
-
+			// User-defined random numbers
+			if usrRndN {
+				smear_scale_lep_0 = rdnNumbers[i_smear][0]
+				smear_scale_lep_1 = rdnNumbers[i_smear][1]
+			}
+			
+			
 			lep_pt_smear.SetPtEtaPhiM(
-				lepTLV.Pt()*smear_scale_1,
+				lepTLV.Pt()*smear_scale_lep_0,
 				lepTLV.Eta(),
 				lepTLV.Phi(),
 				m_lepbar,
 			)
 
-			lepbar_nosmear = lepbarTLV
+			lepbar_pt_smear.SetPtEtaPhiM(
+				lepbarTLV.Pt()*smear_scale_lep_1,
+				lepbarTLV.Eta(),
+				lepbarTLV.Phi(),
+				m_lepbar,
+			)
+
 			lep_nosmear = lepTLV
+			lepbar_nosmear = lepbarTLV
 
 			// let's define the axis transverse to lepton momentum
 			// for theta smearing accounting.
@@ -267,58 +307,39 @@ func (sonn *Sonnenschein) Build(
 
 				lep_v_pt    = lep_v_pt_1
 				lepbar_v_pt = lepbar_v_pt_1
-
-				smear_angle_ee_lep    = 0.0
-				smear_angle_ee_lepbar = 0.0
-				smear_angle_mm_lep    = 0.0
-				smear_angle_mm_lepbar = 0.0
 			)
 
 			if doSmear {
-				smear_angle_ee_lep = smearHs.ThetaLepEE.Rand()
-				smear_angle_ee_lepbar = smearHs.ThetaLepEE.Rand()
-				smear_angle_mm_lep = smearHs.ThetaLepMu.Rand()
-				smear_angle_mm_lepbar = smearHs.ThetaLepMu.Rand()
-			}
-
-			switch {
-			case lepTLV.Pt() > lepbarTLV.Pt():
 				switch {
 				case lepIsE:
-					lep_v_pt = lep_v_pt.Rotate(
-						smear_angle_ee_lep,
-						lep_axis_t,
-					)
+					smear_theta_lep_0 = smearHs.ThetaLepEE.Rand()
 				case lepIsMu:
-					lep_v_pt = lep_v_pt.Rotate(
-						smear_angle_mm_lep,
-						lep_axis_t,
-					)
+					smear_theta_lep_0 = smearHs.ThetaLepMu.Rand()
 				}
-			default:
 				switch {
 				case lepBarIsE:
-					lepbar_v_pt = lepbar_v_pt.Rotate(
-						smear_angle_ee_lepbar,
-						lepbar_axis_t,
-					)
+					smear_theta_lep_1 = smearHs.ThetaLepEE.Rand()
 				case lepBarIsMu:
-					lepbar_v_pt = lepbar_v_pt.Rotate(
-						smear_angle_mm_lepbar,
-						lepbar_axis_t,
-					)
+					smear_theta_lep_1 = smearHs.ThetaLepMu.Rand()
 				}
+				smear_azimu_lep_0 = rnd.Float64()*2*math.Pi
+				smear_azimu_lep_1 = rnd.Float64()*2*math.Pi
 			}
+			
+			// User-defined random numbers
+			if usrRndN {
+				smear_theta_lep_0 = rdnNumbers[i_smear][2]
+				smear_theta_lep_1 = rdnNumbers[i_smear][3]
+				smear_azimu_lep_0 = rdnNumbers[i_smear][4]
+				smear_azimu_lep_1 = rdnNumbers[i_smear][5]
+			}
+			
+			lep_v_pt = lep_v_pt.Rotate(smear_theta_lep_0, lep_axis_t)
+			lepbar_v_pt = lepbar_v_pt.Rotate(smear_theta_lep_1, lepbar_axis_t)
 
-			lep_v_pt = lep_v_pt.Rotate(
-				rnd.Float64()*2*math.Pi,
-				lep_v_pt_1,
-			)
-			lepbar_v_pt = lepbar_v_pt.Rotate(
-				rnd.Float64()*2*math.Pi,
-				lepbar_v_pt_1,
-			)
-
+			lep_v_pt = lep_v_pt.Rotate(smear_azimu_lep_0, lep_v_pt_1)
+			lepbar_v_pt = lepbar_v_pt.Rotate(smear_azimu_lep_1, lepbar_v_pt_1)
+			
 			lep = fmom.NewPxPyPzE(
 				lep_v_pt.X, lep_v_pt.Y, lep_v_pt.Z,
 				lep_pt_smear.E(),
@@ -328,29 +349,57 @@ func (sonn *Sonnenschein) Build(
 				lepbar_pt_smear.E(),
 			)
 
+			
 			if doSmear {
 				smear_scale_jet_0 = smearHs.PtJet.Rand()
 				smear_scale_jet_1 = smearHs.PtJet.Rand()
+				smear_theta_jet_0 = smearHs.ThetaJet.Rand()
+				smear_theta_jet_1 = smearHs.ThetaJetBar.Rand()
+				smear_azimu_jet_0 = rnd.Float64()*2*math.Pi
+				smear_azimu_jet_1 = rnd.Float64()*2*math.Pi
+			}
+			
+			// User-defined random numbers
+			if usrRndN {
+				smear_scale_jet_0 = rdnNumbers[i_smear][6]
+				smear_scale_jet_1 = rdnNumbers[i_smear][7]
+				smear_theta_jet_0 = rdnNumbers[i_smear][8]
+				smear_theta_jet_1 = rdnNumbers[i_smear][9]
+				smear_azimu_jet_0 = rdnNumbers[i_smear][10]
+				smear_azimu_jet_1 = rdnNumbers[i_smear][11]
 			}
 
+			// To keep track of which random number for each jets
+			// (mostly for xcheck when rnd numbers are passed by
+			// the user).
+			var (
+				thetaJet    = 0.
+				thetaJetBar = 0.
+				azimuJet    = 0.
+				azimuJetBar = 0.
+			)
+			
 			switch i_jets {
 			case 0:
-				jetbar_pt_smear.SetPtEtaPhiE(
-					jetbarTLV.Pt()*smear_scale_jet_0,
-					jetbarTLV.Eta(),
-					jetbarTLV.Phi(),
-					jetbarTLV.E(),
-				)
-
 				jet_pt_smear.SetPtEtaPhiE(
-					jetTLV.Pt()*smear_scale_jet_1,
+					jetTLV.Pt()*smear_scale_jet_0,
 					jetTLV.Eta(),
 					jetTLV.Phi(),
 					jetTLV.E(),
 				)
-
-				jetbar_nosmear = jetbarTLV
+				jetbar_pt_smear.SetPtEtaPhiE(
+					jetbarTLV.Pt()*smear_scale_jet_1,
+					jetbarTLV.Eta(),
+					jetbarTLV.Phi(),
+					jetbarTLV.E(),
+				)
 				jet_nosmear = jetTLV
+				jetbar_nosmear = jetbarTLV
+
+				thetaJet    = smear_theta_jet_0
+				thetaJetBar = smear_theta_jet_1
+				azimuJet    = smear_azimu_jet_0
+				azimuJetBar = smear_azimu_jet_1
 
 			case 1:
 				jetbar_pt_smear.SetPtEtaPhiE(
@@ -369,6 +418,11 @@ func (sonn *Sonnenschein) Build(
 
 				jetbar_nosmear = jetTLV
 				jet_nosmear = jetbarTLV
+
+				thetaJetBar = smear_theta_jet_0
+				thetaJet    = smear_theta_jet_1
+				azimuJetBar = smear_azimu_jet_0
+				azimuJet    = smear_azimu_jet_1
 			}
 
 			// let's define the transverse axis to the jet momentum
@@ -385,21 +439,13 @@ func (sonn *Sonnenschein) Build(
 
 				jet_v_pt    = jet_v_pt_1
 				jetbar_v_pt = jetbar_v_pt_1
-
-				smear_angle_jet    = 0.0
-				smear_angle_jetbar = 0.0
 			)
 
-			if doSmear {
-				smear_angle_jet = smearHs.ThetaJet.Rand()
-				smear_angle_jetbar = smearHs.ThetaJetBar.Rand()
-			}
-
-			jet_v_pt = jet_v_pt.Rotate(smear_angle_jet, jet_axis_t)
-			jetbar_v_pt = jetbar_v_pt.Rotate(smear_angle_jetbar, jetbar_axis_t)
-
-			jet_v_pt = jet_v_pt.Rotate(rnd.Float64()*2*math.Pi, jet_v_pt_1)
-			jetbar_v_pt = jetbar_v_pt.Rotate(rnd.Float64()*2*math.Pi, jetbar_v_pt_1)
+			jet_v_pt = jet_v_pt.Rotate(thetaJet, jet_axis_t)
+			jetbar_v_pt = jetbar_v_pt.Rotate(thetaJetBar, jetbar_axis_t)
+			
+			jet_v_pt = jet_v_pt.Rotate(azimuJet, jet_v_pt_1)
+			jetbar_v_pt = jetbar_v_pt.Rotate(azimuJetBar, jetbar_v_pt_1)
 
 			jet = fmom.NewPxPyPzE(
 				jet_v_pt.X,
@@ -446,34 +492,37 @@ func (sonn *Sonnenschein) Build(
 
 			if debug && doSmear {
 				log.Printf("  Smearing iteration %d:", i_smear)
-				log.Printf("   Lepton scale smearing: %g, %g", smear_scale_0, smear_scale_1)
-				log.Printf("   Lepton angle smearing: %g, %g, %g, %g",
-					smear_angle_ee_lep,
-					smear_angle_ee_lepbar,
-					smear_angle_mm_lep,
-					smear_angle_mm_lepbar,
+				log.Printf("   Lep    smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
+					smear_scale_lep_0, smear_theta_lep_0, smear_azimu_lep_0)
+				log.Printf("   Lepbar smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
+					smear_scale_lep_1, smear_theta_lep_1, smear_azimu_lep_1)
+				log.Printf("   Jet0   smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
+					smear_scale_jet_0, smear_theta_jet_0, smear_azimu_jet_0)
+				log.Printf("   Jet1   smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
+					smear_scale_jet_1, smear_theta_jet_1, smear_azimu_lep_1)
+				log.Printf("   Lep    Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
+					lep_nosmear.Pt(), lep.Pt(),
+					lep_nosmear.Px(), lep.Px(),
+					lep_nosmear.Py(), lep.Py(),
+					lep_nosmear.Pz(), lep.Pz(),
 				)
-				log.Printf("   Jet scale smearing: %g, %g",
-					smear_scale_jet_0,
-					smear_scale_jet_1,
+				log.Printf("   Lepbar Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
+					lepbar_nosmear.Pt(), lepbar.Pt(),
+					lepbar_nosmear.Px(), lepbar.Px(),
+					lepbar_nosmear.Py(), lepbar.Py(),
+					lepbar_nosmear.Pz(), lepbar.Pz(),
 				)
-				log.Printf("   Jet angle smearing: %g, %g",
-					smear_angle_jet,
-					smear_angle_jetbar,
+				log.Printf("   Jet0   Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
+					jet_nosmear.Pt(), jet.Pt(),
+					jet_nosmear.Px(), jet.Px(),
+					jet_nosmear.Py(), jet.Py(),
+					jet_nosmear.Pz(), jet.Pz(),
 				)
-				log.Printf("   Px before smear (l, lbar, j, jbar, met): %g, %g, %g, %g, %g",
-					lep_nosmear.Px(),
-					lepbar_nosmear.Px(),
-					jet_nosmear.Px(),
-					jetbar_nosmear.Px(),
-					Emiss_x_nosmear,
-				)
-				log.Printf("   Px after  smear (l, lbar, j, jbar, met): %g, %g, %g, %g, %g",
-					lep.Px(),
-					lepbar.Px(),
-					jet.Px(),
-					jetbar.Px(),
-					Emiss_x_smear,
+				log.Printf("   Jet1   Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
+					jetbar_nosmear.Pt(), jetbar.Pt(),
+					jetbar_nosmear.Px(), jetbar.Px(),
+					jetbar_nosmear.Py(), jetbar.Py(),
+					jetbar_nosmear.Pz(), jetbar.Pz(),
 				)
 			}
 
@@ -584,6 +633,10 @@ func (sonn *Sonnenschein) Build(
 			var zs [4]complex128
 			zs[0], zs[1], zs[2], zs[3] = roots.Poly4(h0, h1, h2, h3, h4)
 
+			if debug {
+				log.Printf("   polynom coeff (h0, h1, h2, h3, h4) = %.3e, %.3e, %.3e, %.3e, %.3e\n", h0, h1, h2, h3, h4)
+			}
+			
 			roots := make([]float64, 0, 4)
 			const ε = 1e-15
 			for _, z := range zs {
@@ -720,9 +773,9 @@ func (sonn *Sonnenschein) Build(
 			i_analyzed_event = 1
 
 			if debug {
-				log.Printf("   weight            : %g", weight_s_sum)
-				log.Printf("   (px, py, pz)[t]   : %g, %g, %g", Top_reco_px, Top_reco_py, Top_reco_pz)
-				log.Printf("   (px, py, pz)[tbar]: %g, %g, %g", Topbar_reco_px, Topbar_reco_py, Topbar_reco_pz)
+				log.Printf("   weight            : %5.3e", weight_s_sum)
+				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", Top_reco_px, Top_reco_py, Top_reco_pz)
+				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", Topbar_reco_px, Topbar_reco_py, Topbar_reco_pz)
 			}
 		}
 
@@ -747,7 +800,7 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	if debug {
-		log.Printf(" Weight sum of jet combinatorics (0, 1): %g, %g", weights_com[0], weights_com[1])
+		log.Printf(" Weight sum of jet combinatorics (0, 1): %5.2e, %5.2e", weights_com[0], weights_com[1])
 	}
 
 	var (
