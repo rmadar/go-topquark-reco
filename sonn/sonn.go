@@ -499,30 +499,64 @@ func (sonn *Sonnenschein) Build(
 				log.Printf("   Jet0   smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
 					smear_scale_jet_0, smear_theta_jet_0, smear_azimu_jet_0)
 				log.Printf("   Jet1   smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
-					smear_scale_jet_1, smear_theta_jet_1, smear_azimu_lep_1)
-				log.Printf("   Lep    Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
-					lep_nosmear.Pt(), lep.Pt(),
-					lep_nosmear.Px(), lep.Px(),
-					lep_nosmear.Py(), lep.Py(),
-					lep_nosmear.Pz(), lep.Pz(),
+					smear_scale_jet_1, smear_theta_jet_1, smear_azimu_jet_1)
+				log.Printf("   Lep    Pt, Px, Py, Pz : %5.2f, %5.2f, %5.2f, %5.2f", 
+					lep_nosmear.Pt(),
+					lep_nosmear.Px(),
+					lep_nosmear.Py(),
+					lep_nosmear.Pz(),
 				)
-				log.Printf("   Lepbar Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
-					lepbar_nosmear.Pt(), lepbar.Pt(),
-					lepbar_nosmear.Px(), lepbar.Px(),
-					lepbar_nosmear.Py(), lepbar.Py(),
-					lepbar_nosmear.Pz(), lepbar.Pz(),
+				log.Printf("                   after : %5.3f, %5.3f, %5.3f, %5.3f", 
+					lep.Pt(),
+					lep.Px(),
+					lep.Py(),
+					lep.Pz(),
 				)
-				log.Printf("   Jet0   Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
-					jet_nosmear.Pt(), jet.Pt(),
-					jet_nosmear.Px(), jet.Px(),
-					jet_nosmear.Py(), jet.Py(),
-					jet_nosmear.Pz(), jet.Pz(),
+				log.Printf("   LepBar Pt, Px, Py, Pz : %5.3f, %5.3f, %5.3f, %5.3f", 
+					lepbar_nosmear.Pt(),
+					lepbar_nosmear.Px(),
+					lepbar_nosmear.Py(),
+					lepbar_nosmear.Pz(),
 				)
-				log.Printf("   Jet1   Pt, Px, Py, Pz (before/after): %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f, %5.2f/%5.2f", 
-					jetbar_nosmear.Pt(), jetbar.Pt(),
-					jetbar_nosmear.Px(), jetbar.Px(),
-					jetbar_nosmear.Py(), jetbar.Py(),
-					jetbar_nosmear.Pz(), jetbar.Pz(),
+				log.Printf("                   after : %5.3f, %5.3f, %5.3f, %5.3f", 
+					lepbar.Pt(),
+					lepbar.Px(),
+					lepbar.Py(),
+					lepbar.Pz(),
+				)
+				log.Printf("   Jet0   Pt, Px, Py, Pz : %5.3f, %5.3f, %5.3f, %5.3f", 
+					jet_nosmear.Pt(),
+					jet_nosmear.Px(),
+					jet_nosmear.Py(),
+					jet_nosmear.Pz(),
+				)
+				log.Printf("                   after : %5.3f, %5.3f, %5.3f, %5.3f", 
+					jet.Pt(),
+					jet.Px(),
+					jet.Py(),
+					jet.Pz(),
+				)
+				log.Printf("   Jet1   Pt, Px, Py, Pz : %5.3f, %5.3f, %5.3f, %5.3f", 
+					jetbar_nosmear.Pt(),
+					jetbar_nosmear.Px(),
+					jetbar_nosmear.Py(),
+					jetbar_nosmear.Pz(),
+				)
+				log.Printf("                   after : %5.3f, %5.3f, %5.3f, %5.3f", 
+					jetbar.Pt(),
+					jetbar.Px(),
+					jetbar.Py(),
+					jetbar.Pz(),
+				)
+				log.Printf("   MET        Pt, Px, Py : %5.3f, %5.3f, %5.3f",
+					math.Sqrt(Emiss_x_nosmear*Emiss_x_nosmear + Emiss_y_nosmear*Emiss_y_nosmear),
+					Emiss_x_nosmear,
+					Emiss_y_nosmear,
+				)
+				log.Printf("                   after : %5.3f, %5.3f, %5.3f",
+					math.Sqrt(Emiss_x_smear*Emiss_x_smear + Emiss_y_smear*Emiss_y_smear),
+					Emiss_x_smear,
+					Emiss_y_smear,
 				)
 			}
 
@@ -559,7 +593,14 @@ func (sonn *Sonnenschein) Build(
 			c00 := -4.*(lepbar.E()*lepbar.E()-lepbar.Py()*lepbar.Py()) -
 				4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a3/a4)*(a3/a4) -
 				8.*lepbar.Py()*lepbar.Pz()*a3/a4
-
+			
+			if debug  {
+				log.Printf("   a1, a2, a3, a4 = %5.3f, %5.3f, %5.3f, %5.3f", a1, a2, a3, a4)
+				log.Printf("   b1, b2, b3, b4 = %5.3f, %5.3f, %5.3f, %5.3f", b1, b2, b3, b4)
+				log.Printf("   c00, c10, c11  = %5.3f, %5.3f, %5.3f", c00, c10, c11)
+				log.Printf("   c22, c21, c20  = %5.3f, %5.3f, %5.3f", c22, c21, c20)
+			}
+			
 			// new norm
 			n44 := a4 * a4
 			c22 *= n44
@@ -606,6 +647,12 @@ func (sonn *Sonnenschein) Build(
 			d10 = d10 * b4 * b4
 			d00 = d00 * b4 * b4
 
+			if debug  {
+				log.Printf("   d22, d21, d20  = %5.3f, %5.3f, %5.3f", d22, d21, d20)
+				log.Printf("   d11, d10, d00  = %5.3f, %5.3f, %5.3f", d11, d10, d00)
+			}
+			
+			
 			h4 := c00*c00*d22*d22 + c11*d22*(c11*d00-c00*d11) +
 				c00*c22*(d11*d11-2.*d00*d22) +
 				c22*d00*(c22*d00-c11*d11)
