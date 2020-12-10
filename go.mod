@@ -1,6 +1,6 @@
 module github.com/rmadar/go-topquark-reco
 
-go 1.14
+go 1.15
 
 require (
 	go-hep.org/x/exp v0.7.1

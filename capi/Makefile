@@ -1,6 +1,6 @@
 .PHONY: all build
 
-GO := go
+GO := go1.15.6
 RM := /bin/rm
 
 build: libcapi.so
