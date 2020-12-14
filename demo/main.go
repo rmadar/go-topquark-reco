@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -14,6 +15,20 @@ import (
 
 func main() {
 
+	// Command line arguments
+	var (
+		debug         = flag.Bool("debug", false, "Print various numbers along the process")
+		smearAll      = flag.Bool("smearAll", false, "Enable smearing of all quantities")
+		smearN        = flag.Int("smearN", 100, "Number of smearing iterations")
+		smearLepPt    = flag.Bool("smearLepPt", false, "Enable lepton pT smearing")
+		smearLepTheta = flag.Bool("smearLepTheta", false, "Enable lepton polar angle smearing")
+		smearLepAzimu = flag.Bool("smearLepAzimy", false, "Enable lepton azimuth angle smearing")
+		smearJetPt    = flag.Bool("smearJetPt", false, "Enable jet pT smearing")
+		smearJetTheta = flag.Bool("smearJetTheta", false, "Enable jet polar angle smearing")
+		smearJetAzimu = flag.Bool("smearJetAzimy", false, "Enable jet azimuth angle smearing")
+	)
+	flag.Parse()
+	
 	// Open the test ROOT file
 	f, err := groot.Open("../testdata/data.root")
 	if err != nil {
@@ -68,9 +83,20 @@ func main() {
 		log.Fatalf("could not create tree reader: %+v", err)
 	}
 	defer r.Close()
-
+	
 	// create a Sonnenschein reco algorithm.
-	rec, err := sonn.New("../testdata/smearingHistos.root", sonn.WithDebug(true))
+	rec, err := sonn.New("../testdata/smearingHistos.root",
+		sonn.WithDebug(*debug),
+		sonn.WithSmearAll(*smearAll),
+		sonn.WithSmearN(*smearN),
+		sonn.WithSmearLepPt(*smearLepPt),
+		sonn.WithSmearLepTheta(*smearLepTheta),
+		sonn.WithSmearLepAzimu(*smearLepAzimu),
+		sonn.WithSmearJetPt(*smearJetPt),
+		sonn.WithSmearJetTheta(*smearJetTheta),
+		sonn.WithSmearJetAzimu(*smearJetAzimu),
+	)
+	
 	if err != nil {
 		log.Fatalf("could not create the Sonnenschein reco algorithm: %+v", err)
 	}

@@ -19,11 +19,16 @@ import (
 // as described in:
 //  https://arxiv.org/abs/hep-ph/0603011
 type Sonnenschein struct {
-	smearer *smearingHistos
-	rnd     *rand.Rand
-	doSmear bool
-	nSmear  int
-	debug   bool
+	smearer       *smearingHistos
+	rnd           *rand.Rand
+	smearN        int
+	smearLepPt    bool
+	smearLepTheta bool
+	smearLepAzimu bool
+	smearJetPt    bool
+	smearJetTheta bool
+	smearJetAzimu bool
+	debug         bool
 }
 
 // New returns a new Sonnenschein builder from the path to a ROOT file holding
@@ -42,19 +47,37 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 		return nil, fmt.Errorf("could not create smearing histograms: %w", err)
 	}
 
-	// Set only one iteration if no smearing
-	if !cfg.doSmear {
-		cfg.nSmear = 1
+	// Activate all smearing if smearAll is enabled
+	if cfg.smearAll {
+		cfg.smearLepPt    = true;
+		cfg.smearLepTheta = true;
+		cfg.smearLepAzimu = true;
+		cfg.smearJetPt    = true;
+		cfg.smearJetTheta = true;
+		cfg.smearJetAzimu = true;
 	}
 
+	// Create the sonnenschein object
+	s := &Sonnenschein{
+		smearer:       sh,
+		rnd:           rand.New(rand.NewSource(cfg.rndseed)),
+		smearLepPt:    cfg.smearLepPt,
+		smearLepTheta: cfg.smearLepTheta,
+		smearLepAzimu: cfg.smearLepAzimu,
+		smearJetPt:    cfg.smearJetPt,
+		smearJetTheta: cfg.smearJetTheta,
+		smearJetAzimu: cfg.smearJetAzimu,
+		smearN:        cfg.smearN,
+		debug:         cfg.debug,
+	}
+	
+	// Set the number of iteration to 1.0 if smearing is disabeld
+	if  s.noSmearing() {
+		s.smearN = 1
+	}
+	
 	// Return the reconstruction object
-	return &Sonnenschein{
-		smearer: sh,
-		rnd:     rand.New(rand.NewSource(cfg.rndseed)),
-		doSmear: cfg.doSmear,
-		nSmear:  cfg.nSmear,
-		debug:   cfg.debug,
-	}, nil
+	return 	s, nil
 }
 
 // smearingHistos holds the histograms used to smear 4-vectors.
@@ -117,9 +140,10 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 // Four-momemtum and missing Et components are in GeV.
 // rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
 // If rndNumbers is not empty, smearing is automatically activated
-// for this function call. When several tuples are passed, the
-// number of smearing iteration is set to be number of tuples,
-// ie len(rdnNumbers). The meaning of random numbers is the following:
+// for this function call for all kinematic variables. When several
+// tuples are passed, the  number of smearing iterations is set
+// to be number of tuples, ie len(rdnNumbers). The ordering of
+// random numbers is the following:
 //   rdn[12] = [12]float64{
 //     scaleLep , scaleLepBar ,
 //     thetaLep , thetaLepBar ,
@@ -135,22 +159,27 @@ func (sonn *Sonnenschein) Build(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
-
+	
 	// Configuration variables
 	var (
-		smearHs = sonn.smearer
-		rnd     = sonn.rnd
-		debug   = sonn.debug
-		doSmear = sonn.doSmear
-		nSmear  = sonn.nSmear
-		usrRndN = false
+		smearHs       = sonn.smearer
+		rnd           = sonn.rnd
+		usrRndN       = false
+		smearLepPt    = sonn.smearLepPt
+		smearLepTheta = sonn.smearLepTheta
+		smearLepAzimu = sonn.smearLepAzimu
+		smearJetPt    = sonn.smearJetPt
+		smearJetTheta = sonn.smearJetTheta
+		smearJetAzimu = sonn.smearJetAzimu
+		smearN        = sonn.smearN
+		debug         = sonn.debug
 	)
 
-	// Overwrite configuration for user-defined rnd numbers
+	// Overwrite configuration for user-defined rnd numbers.
+	// In that case, all smearing kinemarics is applied.
 	if len(rdnNumbers) > 0 {
 		usrRndN = true
-		doSmear = true
-		nSmear  = len(rdnNumbers)
+		smearN  = len(rdnNumbers)
 	}
 
 	// Ouptut of the algorithm
@@ -230,7 +259,7 @@ func (sonn *Sonnenschein) Build(
 		}
 
 		nIterations := 0
-		for i_smear := 0; i_smear < nSmear; i_smear++ {
+		for i_smear := 0; i_smear < smearN; i_smear++ {
 
 			// All smearing variables
 			var (
@@ -248,7 +277,7 @@ func (sonn *Sonnenschein) Build(
 				smear_azimu_jet_1 = 0.0
 			)
 
-			if doSmear {
+			if smearLepPt {
 				switch {
 				case lepIsE:
 					smear_scale_lep_0 = smearHs.PtLepEE.Rand()
@@ -309,7 +338,7 @@ func (sonn *Sonnenschein) Build(
 				lepbar_v_pt = lepbar_v_pt_1
 			)
 
-			if doSmear {
+			if smearLepTheta {
 				switch {
 				case lepIsE:
 					smear_theta_lep_0 = smearHs.ThetaLepEE.Rand()
@@ -322,6 +351,9 @@ func (sonn *Sonnenschein) Build(
 				case lepBarIsMu:
 					smear_theta_lep_1 = smearHs.ThetaLepMu.Rand()
 				}
+			}
+
+			if smearLepAzimu {
 				smear_azimu_lep_0 = rnd.Float64()*2*math.Pi
 				smear_azimu_lep_1 = rnd.Float64()*2*math.Pi
 			}
@@ -349,12 +381,21 @@ func (sonn *Sonnenschein) Build(
 				lepbar_pt_smear.E(),
 			)
 
-			
-			if doSmear {
+
+			// Jet pT smearing
+			if smearJetPt {
 				smear_scale_jet_0 = smearHs.PtJet.Rand()
 				smear_scale_jet_1 = smearHs.PtJet.Rand()
+			}
+
+			// Jet polar angle smearing
+			if smearJetTheta {
 				smear_theta_jet_0 = smearHs.ThetaJet.Rand()
 				smear_theta_jet_1 = smearHs.ThetaJetBar.Rand()
+			}
+
+			// Jet Azimu angle smearing
+			if smearJetAzimu {
 				smear_azimu_jet_0 = rnd.Float64()*2*math.Pi
 				smear_azimu_jet_1 = rnd.Float64()*2*math.Pi
 			}
@@ -490,7 +531,7 @@ func (sonn *Sonnenschein) Build(
 				(jet_nosmear.Py() - jet.Py()) +
 				(jetbar_nosmear.Py() - jetbar.Py())
 
-			if debug && doSmear {
+			if debug {
 				log.Printf("  Smearing iteration %d:", i_smear)
 				log.Printf("   Lep    smearing (scale, theta, azimu): %7.5f, %7.5f %7.5f",
 					smear_scale_lep_0, smear_theta_lep_0, smear_azimu_lep_0)
@@ -937,4 +978,11 @@ func isBad(t fmom.PxPyPzE) bool {
 	isDefault := t.Px() == 10000. && t.Py() == 10000. && t.Pz() == 10000.
 	isEmpty := t.Px() == 0. && t.Py() == 0. && t.Pz() == 0.
 	return isDefault || isEmpty
+}
+
+// Helper function check whether no smearing is required.
+func (sonn *Sonnenschein) noSmearing() bool {
+	noLepSmear := !sonn.smearLepPt && !sonn.smearLepTheta && !sonn.smearLepAzimu
+	noJetSmear := !sonn.smearJetPt && !sonn.smearJetTheta && !sonn.smearJetAzimu
+	return noLepSmear && noJetSmear
 }
