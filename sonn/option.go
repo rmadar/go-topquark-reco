@@ -31,12 +31,12 @@ func newConfig() *config {
 	cfg := &config{
 		rndseed:       1234,
 		smearAll:      true,
-		smearLepPt:    true,
-		smearLepTheta: true,
-		smearLepAzimu: true,
-		smearJetPt:    true,
-		smearJetTheta: true,
-		smearJetAzimu: true,
+		smearLepPt:    false,
+		smearLepTheta: false,
+		smearLepAzimu: false,
+		smearJetPt:    false,
+		smearJetTheta: false,
+		smearJetAzimu: false,
 		smearN:        10,
 		debug:         false,
 	}
@@ -63,7 +63,8 @@ func WithSmearAll(d bool) Option {
 }
 
 // WithSmearLepPt enables smearing of lepton pT.
-// Enabled by default.
+// Disabled by default. To activate individual smearings,
+// the option WithSmearAll(false) must be passed.
 func WithSmearLepPt(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearLepPt = d
@@ -71,7 +72,9 @@ func WithSmearLepPt(d bool) Option {
 }
 
 // WithSmearLepTheta enables smearing of lepton
-// theta (polar) angle. Enabled by default.
+// theta (polar) angle. Disabled by default.
+// To activate individual smearings, the option
+// WithSmearAll(false) must be passed.
 func WithSmearLepTheta(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearLepTheta = d
@@ -79,7 +82,9 @@ func WithSmearLepTheta(d bool) Option {
 }
 
 // WithSmearLepAzimtu enables smearing of lepton
-// azimuth angle. Enabled by default.
+// azimuth angle. Disabled by default.
+// To activate individual smearings, the option
+// WithSmearAll(false) must be passed.
 func WithSmearLepAzimu(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearLepAzimu = d
@@ -87,7 +92,9 @@ func WithSmearLepAzimu(d bool) Option {
 }
 
 // WithSmearLepPt enables smearing of jet pT
-// (actually jet energy). Enabled by default.
+// (actually jet energy). Disabled by default.
+// To activate individual smearings, the option
+// WithSmearAll(false) must be passed.
 func WithSmearJetPt(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearJetPt = d
@@ -95,7 +102,9 @@ func WithSmearJetPt(d bool) Option {
 }
 
 // WithSmearJetTheta enables smearing of jet
-// theta (polar) angle. Enabled by default.
+// theta (polar) angle. Disabled by default.
+// To activate individual smearings, the option
+// WithSmearAll(false) must be passed.
 func WithSmearJetTheta(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearJetTheta = d
@@ -103,7 +112,9 @@ func WithSmearJetTheta(d bool) Option {
 }
 
 // WithSmearJetAzimtu enables smearing of jet
-// azimuth angle. Enabled by default.
+// azimuth angle. Disabled by default.
+// To activate individual smearings, the option
+// WithSmearAll(false) must be passed.
 func WithSmearJetAzimu(d bool) Option {
 	return func(cfg *config) {
 		cfg.smearJetAzimu = d
