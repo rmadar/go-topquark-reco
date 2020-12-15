@@ -1,4 +1,4 @@
-package reco
+package tbuilder
 
 import (
 	"fmt"
@@ -187,7 +187,7 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 //     thetaJet1, thetaJet1Bar,
 //     azimuJet1, azimuJet1Bar,
 //   }
-func (tb *TopBuilder) Reco(
+func (tb *TopBuilder) Reconstruct(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {

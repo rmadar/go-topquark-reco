@@ -10,7 +10,7 @@ import (
 	"go-hep.org/x/hep/groot"
 	"go-hep.org/x/hep/groot/rtree"
 
-	"github.com/rmadar/go-topquark-reco/sonn"
+	"github.com/rmadar/go-topquark-reco/tbuilder"
 )
 
 func main() {
@@ -86,7 +86,7 @@ func main() {
 	defer r.Close()
 	
 	// create a Sonnenschein reco algorithm.
-	builder, err := sonn.New("../testdata/smearingHistos.root",
+	topBuilder, err := tbuilder.New("../testdata/smearingHistos.root",
 		sonn.WithDebug(*debug),
 		sonn.WithSmearN(*smearN),
 		sonn.WithSmearAll(*smearAll),
@@ -139,8 +139,8 @@ func main() {
 		Etx := float64(metMet) * cos
 		Ety := float64(metMet) * sin
 
-		// Call the Sonnenschein reconstruction
-		t, tbar, status := builder.Reco(
+		// Call the reconstruction of top and antitop
+		t, tbar, status := topBuilder.Reconstruct(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
