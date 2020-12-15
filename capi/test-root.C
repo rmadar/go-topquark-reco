@@ -3,9 +3,9 @@
 #include <stdio.h>
 
 extern "C" {
-#include "./libcapi.h"
+#include "./libtopreco.h"
 }
-R__LOAD_LIBRARY(./libcapi.so)
+R__LOAD_LIBRARY(./libtopreco.so)
 
 #include "TFile.h"
 #include "TTree.h"
@@ -24,12 +24,12 @@ P4_t newPtEtaPhiE(float pt, float eta, float phi, float e) {
 }
 
 void test_root() {
-	//gSystem->Load("capi");
+	//gSystem->Load("topreco");
 
 	auto f = TFile::Open("../testdata/data.root");
 	auto t = (TTree*)f->Get("nominal");
 
-	InitSonnenschein((char*)"../testdata/smearingHistos.root");
+	InitTopBuilder((char*)"../testdata/smearingHistos.root");
 
 	const int NLEPS = 10;
 	const int NJETS = 10;
@@ -115,7 +115,7 @@ void test_root() {
 		P4_t jet1 = newPtEtaPhiE(jetPt[1], jetEta[1], jetPhi[1], jetE[1]);
 
 		P4_t top0, top1;
-		Int_t ok = Sonnenschein(
+		Int_t ok = ReconstructTops(
 			lep0, lep1, lepPID[0], lepPID[1],
 			jet0, jet1, j0b, j1b,
 			double(etx), double(ety),

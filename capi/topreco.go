@@ -7,25 +7,25 @@ import "C"
 import (
 	"log"
 
-	"github.com/rmadar/go-topquark-reco/sonn"
+	"github.com/rmadar/go-topquark-reco/tbuilder"
 	"go-hep.org/x/hep/fmom"
 )
 
 func main() {}
 
-var bldr *sonn.Sonnenschein
+var bldr *tbuilder.TopBuilder
 
-//export InitSonnenschein
-func InitSonnenschein(fname *C.char) {
+//export InitTopBuilder
+func InitTopBuilder(fname *C.char) {
 	var err error
-	bldr, err = sonn.New(C.GoString(fname))
+	bldr, err = tbuilder.New(C.GoString(fname))
 	if err != nil {
-		log.Panicf("could not create sonnenschein builder: %+v", err)
+		log.Panicf("could not create TopBuilder: %+v", err)
 	}
 }
 
-//export Sonnenschein
-func Sonnenschein(
+//export ReconstructTops
+func ReconstructTops(
 	lep0, lep1 C.P4_t, lep0PDG, lep1PDG int,
 	jet0, jet1 C.P4_t, bjet0, bjet1 int,
 	emissx, emissy float64,
@@ -34,13 +34,9 @@ func Sonnenschein(
 	*top0 = C.P4_t{}
 	*top1 = C.P4_t{}
 
-	t0, t1, ok := bldr.Build(
-		newPxPyPzE(lep0),
-		newPxPyPzE(lep1),
-		lep0PDG, lep1PDG,
-		newPxPyPzE(jet0),
-		newPxPyPzE(jet1),
-		bjet0 != 0, bjet1 != 0,
+	t0, t1, ok := bldr.Reconstruct(
+		newPxPyPzE(lep0), newPxPyPzE(lep1), lep0PDG, lep1PDG,
+		newPxPyPzE(jet0), newPxPyPzE(jet1), bjet0 != 0, bjet1 != 0,
 		float64(emissx), float64(emissy),
 	)
 
