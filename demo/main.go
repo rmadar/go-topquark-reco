@@ -91,11 +91,11 @@ func main() {
 		sonn.WithSmearN(*smearN),
 		sonn.WithSmearAll(*smearAll),
 		sonn.WithSmearLepPt(*smearLepPt),
-		//sonn.WithSmearLepTheta(*smearLepTheta),
-		//sonn.WithSmearLepAzimu(*smearLepAzimu),
-		//sonn.WithSmearJetPt(*smearJetPt),
-		//sonn.WithSmearJetTheta(*smearJetTheta),
-		//sonn.WithSmearJetAzimu(*smearJetAzimu),
+		sonn.WithSmearLepTheta(*smearLepTheta),
+		sonn.WithSmearLepAzimu(*smearLepAzimu),
+		sonn.WithSmearJetPt(*smearJetPt),
+		sonn.WithSmearJetTheta(*smearJetTheta),
+		sonn.WithSmearJetAzimu(*smearJetAzimu),
 	)
 	
 	if err != nil {
