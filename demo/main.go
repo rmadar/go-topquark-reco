@@ -87,15 +87,15 @@ func main() {
 	
 	// create a Sonnenschein reco algorithm.
 	topBuilder, err := tbuilder.New("../testdata/smearingHistos.root",
-		sonn.WithDebug(*debug),
-		sonn.WithSmearN(*smearN),
-		sonn.WithSmearAll(*smearAll),
-		sonn.WithSmearLepPt(*smearLepPt),
-		sonn.WithSmearLepTheta(*smearLepTheta),
-		sonn.WithSmearLepAzimu(*smearLepAzimu),
-		sonn.WithSmearJetPt(*smearJetPt),
-		sonn.WithSmearJetTheta(*smearJetTheta),
-		sonn.WithSmearJetAzimu(*smearJetAzimu),
+		tbuilder.WithDebug(*debug),
+		tbuilder.WithSmearN(*smearN),
+		tbuilder.WithSmearAll(*smearAll),
+		tbuilder.WithSmearLepPt(*smearLepPt),
+		tbuilder.WithSmearLepTheta(*smearLepTheta),
+		tbuilder.WithSmearLepAzimu(*smearLepAzimu),
+		tbuilder.WithSmearJetPt(*smearJetPt),
+		tbuilder.WithSmearJetTheta(*smearJetTheta),
+		tbuilder.WithSmearJetAzimu(*smearJetAzimu),
 	)
 	
 	if err != nil {
