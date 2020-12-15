@@ -82,16 +82,14 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 
 // smearingHistos holds the histograms used to smear 4-vectors.
 type smearingHistos struct {
-	PtLepEE    hbook.Rand1D
-	PtLepMu    hbook.Rand1D
-	ThetaLepEE hbook.Rand1D
-	ThetaLepMu hbook.Rand1D
-
+	PtLepEE     hbook.Rand1D
+	PtLepMu     hbook.Rand1D
+	ThetaLepEE  hbook.Rand1D
+	ThetaLepMu  hbook.Rand1D
 	PtJet       hbook.Rand1D
 	ThetaJet    hbook.Rand1D
 	ThetaJetBar hbook.Rand1D
-
-	Mlblb *hbook.H1D
+	Mlblb       *hbook.H1D
 }
 
 // NewSmearingHistos returns a set of smearing histograms from the provided
@@ -216,17 +214,12 @@ func (sonn *Sonnenschein) Build(
 	)
 
 	var (
-		nu                            fmom.PxPyPzE
 		jet, jetbar                   fmom.PxPyPzE
 		lep, lepbar                   fmom.PxPyPzE
 		lep_pt_smear, lepbar_pt_smear fmom.PxPyPzE
 		lep_nosmear, lepbar_nosmear   fmom.PxPyPzE
 		jet_pt_smear, jetbar_pt_smear fmom.PxPyPzE
 		jet_nosmear, jetbar_nosmear   fmom.PxPyPzE
-		top, topbar                   fmom.PxPyPzE
-		Top_calc, Topbar_calc         fmom.PxPyPzE
-		nu_calc, nubar_calc           fmom.PxPyPzE
-		Top1, Top2                    fmom.PxPyPzE
 
 		Vec_Top    [2][3]float64
 		Vec_Topbar [2][3]float64
@@ -234,18 +227,8 @@ func (sonn *Sonnenschein) Build(
 		weights_com []float64
 
 		i_analyzed_event int
-		n_solutions      int
 
-		p_nu_y = -999.0
-		p_nu_z = -999.0
 
-		p_nubar_x = -999.0
-		p_nubar_y = -999.0
-		p_nubar_z = -999.0
-
-		p_nu_x_close = 100000.0
-
-		mtt_val []float64
 	)
 
 	// loop over jets
@@ -509,11 +492,6 @@ func (sonn *Sonnenschein) Build(
 			mlbbar.Set(fmom.Add(&lep, &jetbar))
 
 			var (
-				jet_v    = fmom.VecOf(&jet)
-				lep_v    = fmom.VecOf(&lep)
-				jetbar_v = fmom.VecOf(&jetbar)
-				lepbar_v = fmom.VecOf(&lepbar)
-
 				Emiss_x_nosmear = emissx
 				Emiss_y_nosmear = emissy
 				Emiss_x_smear   float64
@@ -601,227 +579,10 @@ func (sonn *Sonnenschein) Build(
 				)
 			}
 
-			a1 := (jet.E()+lepbar.E())*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
-				lepbar.E()*(m_top*m_top-m_b*m_b-m_lepbar*m_lepbar-m_nu*m_nu) +
-				2*jet.E()*lepbar.E()*lepbar.E() - 2*lepbar.E()*(jet_v.Dot(lepbar_v))
-			a2 := 2 * (jet.E()*lepbar.Px() - lepbar.E()*jet.Px())
-			a3 := 2 * (jet.E()*lepbar.Py() - lepbar.E()*jet.Py())
-			a4 := 2 * (jet.E()*lepbar.Pz() - lepbar.E()*jet.Pz())
-
-			b1 := (jetbar.E()+lep.E())*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
-				lep.E()*(m_topbar*m_topbar-m_bbar*m_bbar-m_lep*m_lep-m_nubar*m_nubar) +
-				2.*jetbar.E()*lep.E()*lep.E() - 2.*lep.E()*(jetbar_v.Dot(lep_v))
-			b2 := 2. * (jetbar.E()*lep.Px() - lep.E()*jetbar.Px())
-			b3 := 2. * (jetbar.E()*lep.Py() - lep.E()*jetbar.Py())
-			b4 := 2. * (jetbar.E()*lep.Pz() - lep.E()*jetbar.Pz())
-
-			c22 := (m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
-				4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a1/a4)*(a1/a4) -
-				4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*lepbar.Pz()*a1/a4
-			c21 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Px()-lepbar.Pz()*a2/a4) -
-				8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a2/(a4*a4) -
-				8*lepbar.Px()*lepbar.Pz()*a1/a4
-			c20 := -4.*(lepbar.E()*lepbar.E()-lepbar.Px()*lepbar.Px()) -
-				4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a2/a4)*(a2/a4) -
-				8.*lepbar.Px()*lepbar.Pz()*a2/a4
-
-			c11 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Py()-lepbar.Pz()*a3/a4) -
-				8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a3/(a4*a4) -
-				8.*lepbar.Py()*lepbar.Pz()*a1/a4
-			c10 := -8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a2*a3/(a4*a4) +
-				8.*lepbar.Px()*lepbar.Py() - 8.*lepbar.Px()*lepbar.Pz()*a3/a4 -
-				8.*lepbar.Py()*lepbar.Pz()*a2/a4
-			c00 := -4.*(lepbar.E()*lepbar.E()-lepbar.Py()*lepbar.Py()) -
-				4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a3/a4)*(a3/a4) -
-				8.*lepbar.Py()*lepbar.Pz()*a3/a4
+			// Actual reconstruction
+			_, topP, topbarP := ttbarSonnenscheinKinem(lep, lepbar, jet, jetbar, Emiss_x_smear, Emiss_y_smear,
+				m_top, m_topbar, m_W, m_Wbar, m_b, m_bbar, m_lep, m_lepbar, m_nu, m_nubar, debug)
 			
-			if debug  {
-				log.Printf("   a1, a2, a3, a4 = %5.3f, %5.3f, %5.3f, %5.3f", a1, a2, a3, a4)
-				log.Printf("   b1, b2, b3, b4 = %5.3f, %5.3f, %5.3f, %5.3f", b1, b2, b3, b4)
-				log.Printf("   c00, c10, c11  = %5.3f, %5.3f, %5.3f", c00, c10, c11)
-				log.Printf("   c22, c21, c20  = %5.3f, %5.3f, %5.3f", c22, c21, c20)
-			}
-			
-			// new norm
-			n44 := a4 * a4
-			c22 *= n44
-			c21 *= n44
-			c20 *= n44
-			c11 *= n44
-			c10 *= n44
-			c00 *= n44
-
-			dp22 := (m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
-				4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b1/b4)*(b1/b4) -
-				4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*lep.Pz()*b1/b4
-			dp21 := 4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Px()-lep.Pz()*b2/b4) -
-				8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b2/(b4*b4) - 8.*lep.Px()*lep.Pz()*b1/b4
-			dp20 := -4.*(lep.E()*lep.E()-lep.Px()*lep.Px()) -
-				4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b2/b4)*(b2/b4) -
-				8.*lep.Px()*lep.Pz()*b2/b4
-
-			dp11 := 4*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Py()-lep.Pz()*b3/b4) -
-				8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b3/(b4*b4) -
-				8.*lep.Py()*lep.Pz()*b1/b4
-			dp10 := -8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b2*b3/(b4*b4) +
-				8.*lep.Px()*lep.Py() - 8.*lep.Px()*lep.Pz()*b3/b4 - 8.*lep.Py()*lep.Pz()*b2/b4
-			dp00 := -4.*(lep.E()*lep.E()-lep.Py()*lep.Py()) -
-				4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b3/b4)*(b3/b4) -
-				8.*lep.Py()*lep.Pz()*b3/b4
-
-			d22 := dp22 +
-				Emiss_x_smear*Emiss_x_smear*dp20 +
-				Emiss_y_smear*Emiss_y_smear*dp00 +
-				Emiss_x_smear*Emiss_y_smear*dp10 +
-				Emiss_x_smear*dp21 +
-				Emiss_y_smear*dp11
-			d21 := -1.*dp21 - 2.*Emiss_x_smear*dp20 - Emiss_y_smear*dp10
-			d20 := dp20
-			d11 := -1.*dp11 - 2.*Emiss_y_smear*dp00 - Emiss_x_smear*dp10
-			d10 := dp10
-			d00 := dp00
-
-			d22 = d22 * b4 * b4
-			d21 = d21 * b4 * b4
-			d20 = d20 * b4 * b4
-			d11 = d11 * b4 * b4
-			d10 = d10 * b4 * b4
-			d00 = d00 * b4 * b4
-
-			if debug  {
-				log.Printf("   d22, d21, d20  = %5.3f, %5.3f, %5.3f", d22, d21, d20)
-				log.Printf("   d11, d10, d00  = %5.3f, %5.3f, %5.3f", d11, d10, d00)
-			}
-			
-			
-			h4 := c00*c00*d22*d22 + c11*d22*(c11*d00-c00*d11) +
-				c00*c22*(d11*d11-2.*d00*d22) +
-				c22*d00*(c22*d00-c11*d11)
-
-			h3 := c00*d21*(2.*c00*d22-c11*d11) + c00*d11*(2.*c22*d10+c21*d11) +
-				c22*d00*(2.*c21*d00-c11*d10) - c00*d22*(c11*d10+c10*d11) -
-				2.*c00*d00*(c22*d21+c21*d22) - d00*d11*(c11*c21+c10*c22) +
-				c11*d00*(c11*d21+2*c10*d22)
-
-			h2 := c00*c00*(2.*d22*d20+d21*d21) - c00*d21*(c11*d10+c10*d11) +
-				c11*d20*(c11*d00-c00*d11) + c00*d10*(c22*d10-c10*d22) +
-				c00*d11*(2.*c21*d10+c20*d11) + (2.*c22*c20+c21*c21)*d00*d00 -
-				2.*c00*d00*(c22*d20+c21*d21+c20*d22) +
-				c10*d00*(2.*c11*d21+c10*d22) - d00*d10*(c11*c21+c10*c22) -
-				d00*d11*(c11*c20+c10*c21)
-
-			h1 := c00*d21*(2.*c00*d20-c10*d10) - c00*d20*(c11*d10+c10*d11) +
-				c00*d10*(c21*d10+2*c20*d11) - 2*c00*d00*(c21*d20+c20*d21) +
-				c10*d00*(2.*c11*d20+c10*d21) + c20*d00*(2*c21*d00-c10*d11) -
-				d00*d10*(c11*c20+c10*c21)
-
-			h0 := c00*c00*d20*d20 + c10*d20*(c10*d00-c00*d10) +
-				c20*d10*(c00*d10-c10*d00) + c20*d00*(c20*d00-2.*c00*d20)
-
-			var zs [4]complex128
-			zs[0], zs[1], zs[2], zs[3] = roots.Poly4(h0, h1, h2, h3, h4)
-
-			if debug {
-				log.Printf("   polynom coeff (h0, h1, h2, h3, h4) = %.3e, %.3e, %.3e, %.3e, %.3e\n", h0, h1, h2, h3, h4)
-			}
-			
-			roots := make([]float64, 0, 4)
-			const ε = 1e-15
-			for _, z := range zs {
-				if math.Abs(imag(z)) < ε {
-					roots = append(roots, real(z))
-				}
-			}
-			//sort.Float64s(roots)
-			n_solutions = len(roots)
-			if debug {
-				log.Printf("   number of polynom roots: %d", n_solutions)
-			}
-
-			if n_solutions == 0 {
-				continue
-			}
-			nIterations++
-
-			// select roots
-			var (
-				mtt_min = 100000.0
-
-				Top_reco_px = 10000.0
-				Top_reco_py = 10000.0
-				Top_reco_pz = 10000.0
-
-				Topbar_reco_px = 10000.0
-				Topbar_reco_py = 10000.0
-				Topbar_reco_pz = 10000.0
-			)
-
-			for _, v := range roots {
-				p_nu_x_close = v
-
-				c0 := c00
-				c1 := c11 + c10*p_nu_x_close
-				c2 := c22 + c21*p_nu_x_close + c20*p_nu_x_close*p_nu_x_close
-
-				d0 := d00
-				d1 := d11 + d10*p_nu_x_close
-				d2 := d22 + d21*p_nu_x_close + d20*p_nu_x_close*p_nu_x_close
-
-				p_nu_y = (c0*d2 - c2*d0) / (c1*d0 - c0*d1)
-				p_nu_z = (-1.*a1 - a2*p_nu_x_close - a3*p_nu_y) / a4
-				// delta_z = nu.Pz() - p_nu_z
-				p_nubar_x = Emiss_x_smear - p_nu_x_close
-				p_nubar_y = Emiss_y_smear - p_nu_y
-				p_nubar_z = (-1.*b1 - b2*p_nubar_x - b3*p_nubar_y) / b4
-
-				E_nu_calc := math.Sqrt(p_nu_x_close*p_nu_x_close + p_nu_y*p_nu_y + p_nu_z*p_nu_z)
-				nu_calc = fmom.NewPxPyPzE(p_nu_x_close, p_nu_y, p_nu_z, E_nu_calc)
-
-				E_nubar_calc := math.Sqrt(p_nubar_x*p_nubar_x + p_nubar_y*p_nubar_y + p_nubar_z*p_nubar_z)
-				nubar_calc = fmom.NewPxPyPzE(p_nubar_x, p_nubar_y, p_nubar_z, E_nubar_calc)
-
-				Top1.Set(fmom.Add(fmom.Add(&nu_calc, &lepbar), &jet))
-				Top2.Set(fmom.Add(fmom.Add(&nu, &lepbar), &jet))
-
-				Top_calc.Set(fmom.Add(fmom.Add(&nu_calc, &lepbar), &jet))
-				Topbar_calc.Set(fmom.Add(fmom.Add(&nubar_calc, &lep), &jetbar))
-
-				var (
-					top_antitop_r fmom.PxPyPzE
-					top_antitop_t fmom.PxPyPzE
-				)
-				top_antitop_t.Set(fmom.Add(&top, &topbar))
-				top_antitop_r.Set(fmom.Add(&Top_calc, &Topbar_calc))
-
-				mtt_val = append(mtt_val, top_antitop_r.M())
-
-				if top_antitop_r.M() < mtt_min {
-					mtt_min = top_antitop_r.M()
-
-					//Top_mass_f = Top_calc.M()
-					//Topbar_mass_f = Topbar_calc.M()
-					//Top_mass_f_1 = Top2.M()
-
-					Top_reco_px = Top_calc.Px()
-					Top_reco_py = Top_calc.Py()
-					Top_reco_pz = Top_calc.Pz()
-
-					Topbar_reco_px = Topbar_calc.Px()
-					Topbar_reco_py = Topbar_calc.Py()
-					Topbar_reco_pz = Topbar_calc.Pz()
-
-					//p_nu_x_close_f = v
-					//p_nu_y_f = p_nu_y
-					//p_nu_z_f = p_nu_z
-
-					//p_nubar_x_f = p_nubar_x
-					//p_nubar_y_f = p_nubar_y
-					//p_nubar_z_f = p_nubar_z
-
-					//delta_TOP_mass = Top_calc.M() - m_top
-				} // ---> end of solution selection
-			}
-
 			var (
 				binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
 				binx2 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
@@ -848,22 +609,22 @@ func (sonn *Sonnenschein) Build(
 				weight_s_i2 = smearHs.Mlblb.Value(binx2)
 			}
 
-			Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*Top_reco_px
-			Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*Top_reco_py
-			Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*Top_reco_pz
+			Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*topP.X
+			Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*topP.Y
+			Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*topP.Z
 
-			Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*Topbar_reco_px
-			Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*Topbar_reco_py
-			Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*Topbar_reco_pz
+			Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*topbarP.X
+			Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*topbarP.Y
+			Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*topbarP.Z
 
 			weight_s_sum += weight_s_i1 * weight_s_i2
 
 			i_analyzed_event = 1
 
 			if debug {
-				log.Printf("   weight            : %5.3e", weight_s_sum)
-				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", Top_reco_px, Top_reco_py, Top_reco_pz)
-				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", Topbar_reco_px, Topbar_reco_py, Topbar_reco_pz)
+				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
+				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", topP.X, topP.Y, topP.Z)
+				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", topbarP.X, topbarP.Y, topbarP.Z)
 			}
 		}
 
@@ -872,14 +633,6 @@ func (sonn *Sonnenschein) Build(
 		}
 
 		weights_com = append(weights_com, weight_s_sum)
-		//		if i_jets == 0 {
-		//			lep0 = lep
-		//			lepbar0 = lepbar
-		//		}
-		//		if i_jets == 1 {
-		//			lep1 = lep
-		//			lepbar1 = lepbar
-		//		}
 	}
 
 	// check whether we found a useful solution
@@ -909,9 +662,6 @@ func (sonn *Sonnenschein) Build(
 			topbar_p_sum.Y = Vec_Topbar[0][1] / weights_com[0]
 			topbar_p_sum.Z = Vec_Topbar[0][2] / weights_com[0]
 
-			//	lplus = lepbar0
-			//	lminus = lep0
-
 			i_weight_sel = 1
 
 		}
@@ -926,9 +676,6 @@ func (sonn *Sonnenschein) Build(
 			topbar_p_sum.X = Vec_Topbar[1][0] / weights_com[1]
 			topbar_p_sum.Y = Vec_Topbar[1][1] / weights_com[1]
 			topbar_p_sum.Z = Vec_Topbar[1][2] / weights_com[1]
-
-			//	lplus = lepbar1
-			//	lminus = lep1
 
 			i_weight_sel = 1
 
@@ -985,4 +732,251 @@ func (sonn *Sonnenschein) noSmearing() bool {
 	noLepSmear := !sonn.smearLepPt && !sonn.smearLepTheta && !sonn.smearLepAzimu
 	noJetSmear := !sonn.smearJetPt && !sonn.smearJetTheta && !sonn.smearJetAzimu
 	return noLepSmear && noJetSmear
+}
+
+
+// Intermediate function for code re-factorization
+// This is where the actual reconstruction is performed.
+// It should take in argument: 
+//   4-vector: pLep, pLebar, pJet, pJetbar, etx, ety
+//   masses  : mTop, mTopbar, mW, mWbar, mLep, mLepbar, mNu, mNubar
+// It should return two 3-vectors: p[top] and p[anti-top]
+
+func ttbarSonnenscheinKinem(
+	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64, m_top, m_topbar,
+	m_W, m_Wbar, m_b, m_bbar, m_lep, m_lepbar, m_nu, m_nubar float64, debug bool)  (int, r3.Vec, r3.Vec) {
+	
+	var (
+		jet_v    = fmom.VecOf(&jet)
+		lep_v    = fmom.VecOf(&lep)
+		jetbar_v = fmom.VecOf(&jetbar)
+		lepbar_v = fmom.VecOf(&lepbar)
+
+		p_nu_y       = -999.0
+		p_nu_z       = -999.0
+		p_nubar_x    = -999.0
+		p_nubar_y    = -999.0
+		p_nubar_z    = -999.0
+		p_nu_x_close = 100000.0
+
+		Top_calc, Topbar_calc fmom.PxPyPzE
+		nu_calc, nubar_calc   fmom.PxPyPzE
+		Top1, Top2            fmom.PxPyPzE
+		nu, top, topbar       fmom.PxPyPzE
+		mtt_val               []float64
+	)
+
+	a1 := (jet.E()+lepbar.E())*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
+		lepbar.E()*(m_top*m_top-m_b*m_b-m_lepbar*m_lepbar-m_nu*m_nu) +
+		2*jet.E()*lepbar.E()*lepbar.E() - 2*lepbar.E()*(jet_v.Dot(lepbar_v))
+	a2 := 2 * (jet.E()*lepbar.Px() - lepbar.E()*jet.Px())
+	a3 := 2 * (jet.E()*lepbar.Py() - lepbar.E()*jet.Py())
+	a4 := 2 * (jet.E()*lepbar.Pz() - lepbar.E()*jet.Pz())
+	
+	b1 := (jetbar.E()+lep.E())*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
+		lep.E()*(m_topbar*m_topbar-m_bbar*m_bbar-m_lep*m_lep-m_nubar*m_nubar) +
+		2.*jetbar.E()*lep.E()*lep.E() - 2.*lep.E()*(jetbar_v.Dot(lep_v))
+	b2 := 2. * (jetbar.E()*lep.Px() - lep.E()*jetbar.Px())
+	b3 := 2. * (jetbar.E()*lep.Py() - lep.E()*jetbar.Py())
+	b4 := 2. * (jetbar.E()*lep.Pz() - lep.E()*jetbar.Pz())
+	
+	c22 := (m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
+		4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a1/a4)*(a1/a4) -
+		4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*lepbar.Pz()*a1/a4
+	c21 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Px()-lepbar.Pz()*a2/a4) -
+		8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a2/(a4*a4) -
+		8*lepbar.Px()*lepbar.Pz()*a1/a4
+	c20 := -4.*(lepbar.E()*lepbar.E()-lepbar.Px()*lepbar.Px()) -
+		4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a2/a4)*(a2/a4) -
+		8.*lepbar.Px()*lepbar.Pz()*a2/a4
+	
+	c11 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Py()-lepbar.Pz()*a3/a4) -
+		8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a3/(a4*a4) -
+		8.*lepbar.Py()*lepbar.Pz()*a1/a4
+	c10 := -8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a2*a3/(a4*a4) +
+		8.*lepbar.Px()*lepbar.Py() - 8.*lepbar.Px()*lepbar.Pz()*a3/a4 -
+		8.*lepbar.Py()*lepbar.Pz()*a2/a4
+	c00 := -4.*(lepbar.E()*lepbar.E()-lepbar.Py()*lepbar.Py()) -
+		4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a3/a4)*(a3/a4) -
+		8.*lepbar.Py()*lepbar.Pz()*a3/a4
+	
+	if debug  {
+		log.Printf("   a1, a2, a3, a4 = %5.3f, %5.3f, %5.3f, %5.3f", a1, a2, a3, a4)
+		log.Printf("   b1, b2, b3, b4 = %5.3f, %5.3f, %5.3f, %5.3f", b1, b2, b3, b4)
+		log.Printf("   c00, c10, c11  = %5.3f, %5.3f, %5.3f", c00, c10, c11)
+		log.Printf("   c22, c21, c20  = %5.3f, %5.3f, %5.3f", c22, c21, c20)
+	}
+	
+	// new norm
+	n44 := a4 * a4
+	c22 *= n44
+	c21 *= n44
+	c20 *= n44
+	c11 *= n44
+	c10 *= n44
+	c00 *= n44
+	
+	dp22 := (m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
+		4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b1/b4)*(b1/b4) -
+		4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*lep.Pz()*b1/b4
+	dp21 := 4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Px()-lep.Pz()*b2/b4) -
+		8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b2/(b4*b4) - 8.*lep.Px()*lep.Pz()*b1/b4
+	dp20 := -4.*(lep.E()*lep.E()-lep.Px()*lep.Px()) -
+		4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b2/b4)*(b2/b4) -
+		8.*lep.Px()*lep.Pz()*b2/b4
+	
+	dp11 := 4*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Py()-lep.Pz()*b3/b4) -
+		8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b3/(b4*b4) -
+		8.*lep.Py()*lep.Pz()*b1/b4
+	dp10 := -8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b2*b3/(b4*b4) +
+		8.*lep.Px()*lep.Py() - 8.*lep.Px()*lep.Pz()*b3/b4 - 8.*lep.Py()*lep.Pz()*b2/b4
+	dp00 := -4.*(lep.E()*lep.E()-lep.Py()*lep.Py()) -
+		4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b3/b4)*(b3/b4) -
+		8.*lep.Py()*lep.Pz()*b3/b4
+	
+	d22 := dp22 +
+		etx*etx*dp20 +
+		ety*ety*dp00 +
+		etx*ety*dp10 +
+		etx*dp21 +
+		ety*dp11
+	d21 := -1.*dp21 - 2.*etx*dp20 - ety*dp10
+	d20 := dp20
+	d11 := -1.*dp11 - 2.*ety*dp00 - etx*dp10
+	d10 := dp10
+	d00 := dp00
+	
+	d22 = d22 * b4 * b4
+	d21 = d21 * b4 * b4
+	d20 = d20 * b4 * b4
+	d11 = d11 * b4 * b4
+	d10 = d10 * b4 * b4
+	d00 = d00 * b4 * b4
+	
+	if debug  {
+		log.Printf("   d22, d21, d20  = %5.3f, %5.3f, %5.3f", d22, d21, d20)
+		log.Printf("   d11, d10, d00  = %5.3f, %5.3f, %5.3f", d11, d10, d00)
+	}
+	
+	
+	h4 := c00*c00*d22*d22 + c11*d22*(c11*d00-c00*d11) +
+		c00*c22*(d11*d11-2.*d00*d22) +
+		c22*d00*(c22*d00-c11*d11)
+	
+	h3 := c00*d21*(2.*c00*d22-c11*d11) + c00*d11*(2.*c22*d10+c21*d11) +
+		c22*d00*(2.*c21*d00-c11*d10) - c00*d22*(c11*d10+c10*d11) -
+		2.*c00*d00*(c22*d21+c21*d22) - d00*d11*(c11*c21+c10*c22) +
+		c11*d00*(c11*d21+2*c10*d22)
+	
+	h2 := c00*c00*(2.*d22*d20+d21*d21) - c00*d21*(c11*d10+c10*d11) +
+		c11*d20*(c11*d00-c00*d11) + c00*d10*(c22*d10-c10*d22) +
+		c00*d11*(2.*c21*d10+c20*d11) + (2.*c22*c20+c21*c21)*d00*d00 -
+		2.*c00*d00*(c22*d20+c21*d21+c20*d22) +
+		c10*d00*(2.*c11*d21+c10*d22) - d00*d10*(c11*c21+c10*c22) -
+		d00*d11*(c11*c20+c10*c21)
+	
+	h1 := c00*d21*(2.*c00*d20-c10*d10) - c00*d20*(c11*d10+c10*d11) +
+		c00*d10*(c21*d10+2*c20*d11) - 2*c00*d00*(c21*d20+c20*d21) +
+		c10*d00*(2.*c11*d20+c10*d21) + c20*d00*(2*c21*d00-c10*d11) -
+		d00*d10*(c11*c20+c10*c21)
+	
+	h0 := c00*c00*d20*d20 + c10*d20*(c10*d00-c00*d10) +
+		c20*d10*(c00*d10-c10*d00) + c20*d00*(c20*d00-2.*c00*d20)
+	
+	var zs [4]complex128
+	zs[0], zs[1], zs[2], zs[3] = roots.Poly4(h0, h1, h2, h3, h4)
+	
+	if debug {
+		log.Printf("   polynom coeff (h0, h1, h2, h3, h4) = %.3e, %.3e, %.3e, %.3e, %.3e\n", h0, h1, h2, h3, h4)
+	}
+	
+	roots := make([]float64, 0, 4)
+	const ε = 1e-15
+	for _, z := range zs {
+		if math.Abs(imag(z)) < ε {
+			roots = append(roots, real(z))
+		}
+	}
+	nSolutions := len(roots)
+	if debug {
+		log.Printf("   number of polynom roots: %d", nSolutions)
+	}
+	
+	// Default values
+	var (
+		mtt_min = 100000.0
+		
+		Top_reco_px = 10000.0
+		Top_reco_py = 10000.0
+		Top_reco_pz = 10000.0
+		
+		Topbar_reco_px = 10000.0
+		Topbar_reco_py = 10000.0
+		Topbar_reco_pz = 10000.0
+	)
+
+	// If no solution, return default values.
+	if nSolutions == 0 {
+		return nSolutions,
+			r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz},
+			r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
+		
+	}
+
+	// Select solutions
+	for _, v := range roots {
+		p_nu_x_close = v
+		
+		c0 := c00
+		c1 := c11 + c10*p_nu_x_close
+		c2 := c22 + c21*p_nu_x_close + c20*p_nu_x_close*p_nu_x_close
+		
+		d0 := d00
+		d1 := d11 + d10*p_nu_x_close
+		d2 := d22 + d21*p_nu_x_close + d20*p_nu_x_close*p_nu_x_close
+		
+		p_nu_y = (c0*d2 - c2*d0) / (c1*d0 - c0*d1)
+		p_nu_z = (-1.*a1 - a2*p_nu_x_close - a3*p_nu_y) / a4
+		// delta_z = nu.Pz() - p_nu_z
+		p_nubar_x = etx - p_nu_x_close
+		p_nubar_y = ety - p_nu_y
+		p_nubar_z = (-1.*b1 - b2*p_nubar_x - b3*p_nubar_y) / b4
+		
+		E_nu_calc := math.Sqrt(p_nu_x_close*p_nu_x_close + p_nu_y*p_nu_y + p_nu_z*p_nu_z)
+		nu_calc = fmom.NewPxPyPzE(p_nu_x_close, p_nu_y, p_nu_z, E_nu_calc)
+		
+		E_nubar_calc := math.Sqrt(p_nubar_x*p_nubar_x + p_nubar_y*p_nubar_y + p_nubar_z*p_nubar_z)
+		nubar_calc = fmom.NewPxPyPzE(p_nubar_x, p_nubar_y, p_nubar_z, E_nubar_calc)
+		
+		Top1.Set(fmom.Add(fmom.Add(&nu_calc, &lepbar), &jet))
+		Top2.Set(fmom.Add(fmom.Add(&nu, &lepbar), &jet))
+		
+		Top_calc.Set(fmom.Add(fmom.Add(&nu_calc, &lepbar), &jet))
+		Topbar_calc.Set(fmom.Add(fmom.Add(&nubar_calc, &lep), &jetbar))
+		
+		var (
+			top_antitop_r fmom.PxPyPzE
+			top_antitop_t fmom.PxPyPzE
+		)
+		top_antitop_t.Set(fmom.Add(&top, &topbar))
+		top_antitop_r.Set(fmom.Add(&Top_calc, &Topbar_calc))
+		
+		mtt_val = append(mtt_val, top_antitop_r.M())
+		
+		if top_antitop_r.M() < mtt_min {
+			mtt_min = top_antitop_r.M()
+			Top_reco_px = Top_calc.Px()
+			Top_reco_py = Top_calc.Py()
+			Top_reco_pz = Top_calc.Pz()
+			Topbar_reco_px = Topbar_calc.Px()
+			Topbar_reco_py = Topbar_calc.Py()
+			Topbar_reco_pz = Topbar_calc.Pz()
+		} // ---> end of solution selection
+	}
+
+	// Final results
+	topP    := r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz}
+	topbarP := r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
+
+	return nSolutions, topP, topbarP
 }
