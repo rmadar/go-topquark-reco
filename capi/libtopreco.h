@@ -74,7 +74,7 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern void InitTopBuilder(char* fname);
+extern void InitTopBuilder(char* fname, int nSmear, int debug);
 extern GoInt ReconstructTops(P4_t lep0, P4_t lep1, GoInt lep0PDG, GoInt lep1PDG, P4_t jet0, P4_t jet1, GoInt bjet0, GoInt bjet1, GoFloat64 emissx, GoFloat64 emissy, P4_t* top0, P4_t* top1);
 
 #ifdef __cplusplus

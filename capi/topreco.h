@@ -11,8 +11,7 @@ P4_t newP4(TLorentzVector tlv){
 
 Int_t runTopReconstruction(TLorentzVector l, TLorentzVector lbar, Int_t pid, Int_t pidbar,
 			   TLorentzVector j, TLorentzVector jbar, Int_t jbtag, Int_t jbarbtag,
-			   double etx, double ety,
-			   TLorentzVector *t, TLorentzVector *tbar) {  
+			   double etx, double ety, TLorentzVector *t, TLorentzVector *tbar) {  
   P4_t top0, top1;
   Int_t ok = ReconstructTops(
 			     newP4(l), newP4(lbar), pid, pidbar,

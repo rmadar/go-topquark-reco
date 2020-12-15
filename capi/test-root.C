@@ -19,7 +19,10 @@ void test_root() {
 	auto t = (TTree*)f->Get("nominal");
 
 	// Init the TopBuilder
-	InitTopBuilder((char*)"../testdata/smearingHistos.root");
+	auto smearFile = "../testdata/smearingHistos.root";
+	auto nSmearing = 100;
+	auto debugMode = 0;
+	InitTopBuilder((char*)smearFile, nSmearing, debugMode);
 	
 	const int NLEPS = 10;
 	const int NJETS = 10;

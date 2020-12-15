@@ -16,9 +16,19 @@ func main() {}
 var bldr *tbuilder.TopBuilder
 
 //export InitTopBuilder
-func InitTopBuilder(fname *C.char) {
+func InitTopBuilder(fname *C.char, nSmear C.int, debug C.int) {
+	
+	debugB := false
+	if debug == 1 {
+		debugB = true
+	}
+
 	var err error
-	bldr, err = tbuilder.New(C.GoString(fname))
+	bldr, err = tbuilder.New(C.GoString(fname),
+		tbuilder.WithSmearN(int(nSmear)),
+		tbuilder.WithDebug(debugB),
+	)
+	
 	if err != nil {
 		log.Panicf("could not create TopBuilder: %+v", err)
 	}
