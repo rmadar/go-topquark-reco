@@ -1,27 +1,16 @@
 // +build ignore
 
+// Std libs
 #include <stdio.h>
 
-extern "C" {
-#include "./libtopreco.h"
-}
-R__LOAD_LIBRARY(./libtopreco.so)
-
+// ROOT libs
 #include "TFile.h"
 #include "TTree.h"
 #include "TLorentzVector.h"
 
-P4_t newPtEtaPhiM(float pt, float eta, float phi, float m) {
-	TLorentzVector tlv;
-	tlv.SetPtEtaPhiM(pt,eta,phi,m);
-	return P4_t{tlv.Px(), tlv.Py(), tlv.Pz(), tlv.E()};
-}
+// topreco lib
+#include "topreco.h"
 
-P4_t newPtEtaPhiE(float pt, float eta, float phi, float e) {
-	TLorentzVector tlv;
-	tlv.SetPtEtaPhiE(pt,eta,phi,e);
-	return P4_t{tlv.Px(), tlv.Py(), tlv.Pz(), tlv.E()};
-}
 
 void test_root() {
 	//gSystem->Load("topreco");
@@ -29,11 +18,11 @@ void test_root() {
 	auto f = TFile::Open("../testdata/data.root");
 	auto t = (TTree*)f->Get("nominal");
 
+	// Init the TopBuilder
 	InitTopBuilder((char*)"../testdata/smearingHistos.root");
-
+	
 	const int NLEPS = 10;
 	const int NJETS = 10;
-
 
 	Long64_t evtNum;
 	Int_t nlep;
@@ -102,8 +91,11 @@ void test_root() {
 		Int_t j0b = jetMV2[0] > 0.691 ? 1 : 0;
 		Int_t j1b = jetMV2[1] > 0.691 ? 1 : 0;
 
-		P4_t lep0 = newPtEtaPhiM(lepPt[0], lepEta[0], lepPhi[0], 0);
-		P4_t lep1 = newPtEtaPhiM(lepPt[1], lepEta[1], lepPhi[1], 0);
+		TLorentzVector lep0, lep1, jet0, jet1, t, tbar;
+		lep0.SetPtEtaPhiM(lepPt[0], lepEta[0], lepPhi[0], 0);
+		lep1.SetPtEtaPhiM(lepPt[1], lepEta[1], lepPhi[1], 0);
+		jet0.SetPtEtaPhiM(jetPt[0], jetEta[0], jetPhi[0], jetE[0]);
+		jet1.SetPtEtaPhiE(jetPt[1], jetEta[1], jetPhi[1], jetE[1]);
 		Int_t pdg0 = lepPID[0];
 		Int_t pdg1 = lepPID[1];
 		if (lepPID[0] > 0) {
@@ -111,24 +103,19 @@ void test_root() {
 			std::swap(pdg0, pdg1);
 		}
 
-		P4_t jet0 = newPtEtaPhiM(jetPt[0], jetEta[0], jetPhi[0], jetE[0]);
-		P4_t jet1 = newPtEtaPhiE(jetPt[1], jetEta[1], jetPhi[1], jetE[1]);
-
-		P4_t top0, top1;
-		Int_t ok = ReconstructTops(
-			lep0, lep1, lepPID[0], lepPID[1],
-			jet0, jet1, j0b, j1b,
-			double(etx), double(ety),
-			&top0, &top1
-		);
-
+		// Call the reconstruction
+		Int_t ok = runTopReconstruction(lep0, lep1, lepPID[0], lepPID[1],
+						jet0, jet1, j0b, j1b,
+						double(etx), double(ety),
+						&t, &tbar);
+		
 		if (ok != 0) {
 			printf("evt: %lld (entry=%d)\n", evtNum, n);
-			printf("top[%d]: (%g, %g, %g, %g)\n",
-					0, top0.Px, top0.Py, top0.Pz, top0.E
+			printf("t   : (%g, %g, %g, %g)\n",
+			       t.Px(), t.Py(), t.Pz(), t.E()
 			);
-			printf("top[%d]: (%g, %g, %g, %g)\n",
-					1, top1.Px, top1.Py, top1.Pz, top1.E
+			printf("tbar: (%g, %g, %g, %g)\n",
+			       tbar.Px(), tbar.Py(), tbar.Pz(), tbar.E()
 			);
 			nok++;
 		}
