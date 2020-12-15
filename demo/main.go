@@ -86,7 +86,7 @@ func main() {
 	defer r.Close()
 	
 	// create a Sonnenschein reco algorithm.
-	rec, err := sonn.New("../testdata/smearingHistos.root",
+	builder, err := sonn.New("../testdata/smearingHistos.root",
 		sonn.WithDebug(*debug),
 		sonn.WithSmearN(*smearN),
 		sonn.WithSmearAll(*smearAll),
@@ -140,7 +140,7 @@ func main() {
 		Ety := float64(metMet) * sin
 
 		// Call the Sonnenschein reconstruction
-		t, tbar, status := rec.Build(
+		t, tbar, status := builder.Reco(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,

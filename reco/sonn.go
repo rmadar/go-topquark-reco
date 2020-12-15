@@ -1,4 +1,4 @@
-package sonn
+package reco
 
 import (
 	"fmt"
@@ -29,10 +29,14 @@ const (
 	mLepbar = 0.0
 )
 
-// Sonnenschein reconstructs ttbar pairs using the Sonnenschein method
-// as described in:
-//  https://arxiv.org/abs/hep-ph/0603011
-type Sonnenschein struct {
+// TopBuilder reconstructs ttbar pairs in dilepton final state.
+// Two methods can be used:
+//  * the Sonnenschein method (https://arxiv.org/abs/hep-ph/0603011)
+//  * the ellipses method (https://arxiv.org/abs/1305.1878)
+// Each of these method is implemented along a smearing of
+// object kinematics in order to maximize the reconstruction
+// efficiency.
+type TopBuilder struct {
 	smearer       *smearingHistos
 	rnd           *rand.Rand
 	smearN        int
@@ -45,9 +49,9 @@ type Sonnenschein struct {
 	debug         bool
 }
 
-// New returns a new Sonnenschein builder from the path to a ROOT file holding
-// histograms used to smear 4-vectors, and a seed for the PRNG.
-func New(fname string, opts ...Option) (*Sonnenschein, error) {
+// New returns a new TopBuilder object from the path to a ROOT file holding
+// histograms used to smear object kinematics, and set of options.
+func New(fname string, opts ...Option) (*TopBuilder, error) {
 
 	// Configuration of the reconstruction
 	cfg := newConfig()
@@ -72,7 +76,7 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 	}
 
 	// Create the sonnenschein object
-	s := &Sonnenschein{
+	tb := &TopBuilder{
 		smearer:       sh,
 		rnd:           rand.New(rand.NewSource(cfg.rndseed)),
 		smearLepPt:    cfg.smearLepPt,
@@ -86,11 +90,13 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 	}
 	
 	// Set the number of iteration to 1.0 if smearing is disabeld
-	if  s.noSmearing() {
-		s.smearN = 1
+	noLepSmear := !tb.smearLepPt && !tb.smearLepTheta && !tb.smearLepAzimu
+	noJetSmear := !tb.smearJetPt && !tb.smearJetTheta && !tb.smearJetAzimu
+	if noLepSmear && noJetSmear {
+		tb.smearN = 1
 	}
 	
-	if s.debug {
+	if tb.debug {
 		fmt.Printf("\n\n")
 		log.Printf("Top Reconstruction Configuration:\n")
 		log.Printf("  - Smearing file      : %v\n", fname)
@@ -105,7 +111,7 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 	}
 
 	// Return the reconstruction object
-	return s, nil
+	return tb, nil
 }
 
 // smearingHistos holds the histograms used to smear 4-vectors.
@@ -160,7 +166,7 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 	return sh, err
 }
 
-// Build perform the reconstruction and return 2 4-momentum
+// Reco performs the reconstruction and return 2 4-momentum
 // (top and anti-top) as well as a status of the reconstruction.
 // Status = 1 (0) means the reconstruction (didn't) work.
 // Four-momemtum and missing Et components are in GeV.
@@ -181,24 +187,24 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 //     thetaJet1, thetaJet1Bar,
 //     azimuJet1, azimuJet1Bar,
 //   }
-func (sonn *Sonnenschein) Build(
+func (tb *TopBuilder) Reco(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
 	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
 	
 	// Configuration variables
 	var (
-		smearHs       = sonn.smearer
-		rnd           = sonn.rnd
+		smearHs       = tb.smearer
+		rnd           = tb.rnd
 		usrRndN       = false
-		smearLepPt    = sonn.smearLepPt
-		smearLepTheta = sonn.smearLepTheta
-		smearLepAzimu = sonn.smearLepAzimu
-		smearJetPt    = sonn.smearJetPt
-		smearJetTheta = sonn.smearJetTheta
-		smearJetAzimu = sonn.smearJetAzimu
-		smearN        = sonn.smearN
-		debug         = sonn.debug
+		smearLepPt    = tb.smearLepPt
+		smearLepTheta = tb.smearLepTheta
+		smearLepAzimu = tb.smearLepAzimu
+		smearJetPt    = tb.smearJetPt
+		smearJetTheta = tb.smearJetTheta
+		smearJetAzimu = tb.smearJetAzimu
+		smearN        = tb.smearN
+		debug         = tb.debug
 	)
 
 	// Overwrite configuration for user-defined rnd numbers.
@@ -590,7 +596,7 @@ func (sonn *Sonnenschein) Build(
 			}
 
 			// Actual reconstruction
-			recoOK, topP, topbarP := ttbarSonnenscheinKinem(
+			recoOK, topP, topbarP := sonnenschein(
 				lep, lepbar,
 				jet, jetbar,
 				Emiss_x_smear, Emiss_y_smear,
@@ -745,21 +751,9 @@ func isBad(t fmom.PxPyPzE) bool {
 	return isDefault || isEmpty
 }
 
-// Helper function check whether no smearing is required.
-func (sonn *Sonnenschein) noSmearing() bool {
-	noLepSmear := !sonn.smearLepPt && !sonn.smearLepTheta && !sonn.smearLepAzimu
-	noJetSmear := !sonn.smearJetPt && !sonn.smearJetTheta && !sonn.smearJetAzimu
-	return noLepSmear && noJetSmear
-}
 
-
-// Intermediate function for code re-factorization
-// This is where the actual reconstruction is performed.
-// It should take in argument: 
-//   4-vector: pLep, pLebar, pJet, pJetbar, etx, ety
-//   masses  : mTop, mTopbar, mW, mWbar, mLep, mLepbar, mNu, mNubar
-// It should return two 3-vectors: p[top] and p[anti-top]
-func ttbarSonnenscheinKinem(
+// Internal function performing the Sonnenschein reconsruction.
+func sonnenschein(
 	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64,
 	debug bool) (bool, r3.Vec, r3.Vec) {
 	
