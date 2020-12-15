@@ -590,44 +590,55 @@ func (sonn *Sonnenschein) Build(
 			}
 
 			// Actual reconstruction
-			_, topP, topbarP := ttbarSonnenscheinKinem(lep, lepbar, jet, jetbar, Emiss_x_smear, Emiss_y_smear, debug)
-			
+			recoOK, topP, topbarP := ttbarSonnenscheinKinem(
+				lep, lepbar,
+				jet, jetbar,
+				Emiss_x_smear, Emiss_y_smear,
+				debug,
+			)
+
 			var (
 				binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
 				binx2 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
-
-				weight_s_i1 float64
-				weight_s_i2 float64
+				weight_s_i1 = 0.0
+				weight_s_i2 = 0.0
 			)
 
-			switch binx1 {
-			case hbook.UnderflowBin1D:
-				weight_s_i1 = smearHs.Mlblb.Binning.Underflow().SumW()
-			case hbook.OverflowBin1D:
-				weight_s_i1 = smearHs.Mlblb.Binning.Overflow().SumW()
-			default:
-				weight_s_i1 = smearHs.Mlblb.Value(binx1)
+			// Only if the reconstruction is successful:
+			//  - increment the number of good iteration
+			//  - compute the weight associated to this jet combination
+			if recoOK {
+				nIterations += 1
+				
+				switch binx1 {
+				case hbook.UnderflowBin1D:
+					weight_s_i1 = smearHs.Mlblb.Binning.Underflow().SumW()
+				case hbook.OverflowBin1D:
+					weight_s_i1 = smearHs.Mlblb.Binning.Overflow().SumW()
+				default:
+					weight_s_i1 = smearHs.Mlblb.Value(binx1)
+				}
+				
+				switch binx2 {
+				case hbook.UnderflowBin1D:
+					weight_s_i2 = smearHs.Mlblb.Binning.Underflow().SumW()
+				case hbook.OverflowBin1D:
+					weight_s_i2 = smearHs.Mlblb.Binning.Overflow().SumW()
+				default:
+					weight_s_i2 = smearHs.Mlblb.Value(binx2)
+				}
 			}
-
-			switch binx2 {
-			case hbook.UnderflowBin1D:
-				weight_s_i2 = smearHs.Mlblb.Binning.Underflow().SumW()
-			case hbook.OverflowBin1D:
-				weight_s_i2 = smearHs.Mlblb.Binning.Overflow().SumW()
-			default:
-				weight_s_i2 = smearHs.Mlblb.Value(binx2)
-			}
-
+						
 			Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*topP.X
 			Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*topP.Y
 			Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*topP.Z
-
+			
 			Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*topbarP.X
 			Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*topbarP.Y
 			Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*topbarP.Z
-
-			weight_s_sum += weight_s_i1 * weight_s_i2
-
+			
+			weight_s_sum = weight_s_i1 * weight_s_i2
+			
 			if debug {
 				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
 				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", topP.X, topP.Y, topP.Z)
@@ -639,6 +650,7 @@ func (sonn *Sonnenschein) Build(
 			log.Printf("   number of iteration with solutions : %d", nIterations)
 		}
 
+		// Append this jet combination only 
 		weights_com = append(weights_com, weight_s_sum)
 	}
 
@@ -710,8 +722,8 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	if debug {
-		log.Printf(" P[t]   : %v, M=%v", tFinal, tFinal.M())
-		log.Printf(" P[tbar]: %v, M=%v", tbarFinal, tbarFinal.M())
+		log.Printf(" Final P[t]   : %v, M=%v", tFinal, tFinal.M())
+		log.Printf(" Final P[tbar]: %v, M=%v", tbarFinal, tbarFinal.M())
 	}
 
 	// Return the results
@@ -749,7 +761,7 @@ func (sonn *Sonnenschein) noSmearing() bool {
 // It should return two 3-vectors: p[top] and p[anti-top]
 func ttbarSonnenscheinKinem(
 	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64,
-	debug bool) (int, r3.Vec, r3.Vec) {
+	debug bool) (bool, r3.Vec, r3.Vec) {
 	
 	var (
 		jet_v    = fmom.VecOf(&jet)
@@ -922,7 +934,7 @@ func ttbarSonnenscheinKinem(
 
 	// If no solution, return default values.
 	if nSolutions == 0 {
-		return nSolutions,
+		return false,
 			r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz},
 			r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
 		
@@ -982,5 +994,5 @@ func ttbarSonnenscheinKinem(
 	topP    := r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz}
 	topbarP := r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
 
-	return nSolutions, topP, topbarP
+	return nSolutions>0, topP, topbarP
 }
