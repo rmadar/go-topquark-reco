@@ -13,7 +13,7 @@ Int_t runTopReconstruction(TLorentzVector l, TLorentzVector lbar, Int_t pid, Int
 			   TLorentzVector j, TLorentzVector jbar, Int_t jbtag, Int_t jbarbtag,
 			   double etx, double ety, TLorentzVector *t, TLorentzVector *tbar) {  
   P4_t top0, top1;
-  Int_t ok = ReconstructTops(
+  Int_t nIter = ReconstructTops(
 			     newP4(l), newP4(lbar), pid, pidbar,
 			     newP4(j), newP4(jbar), jbtag, jbarbtag,
 			     etx, ety, &top0, &top1);
@@ -21,5 +21,5 @@ Int_t runTopReconstruction(TLorentzVector l, TLorentzVector lbar, Int_t pid, Int
   t->SetPxPyPzE(top0.Px, top0.Py, top0.Pz, top0.E);
   tbar->SetPxPyPzE(top1.Px, top1.Py, top1.Pz, top1.E);
     
-  return ok;
+  return nIter;
 }
