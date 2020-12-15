@@ -17,6 +17,7 @@ func main() {
 
 	// Command line arguments
 	var (
+		nEvts         = flag.Int("n", -1, "Number of processed events")
 		debug         = flag.Bool("debug", false, "Print various numbers along the process")
 		smearAll      = flag.Bool("smearAll", false, "Enable smearing of all quantities")
 		smearN        = flag.Int("smearN", 100, "Number of smearing iterations")
@@ -78,7 +79,7 @@ func main() {
 	)
 
 	// Get the TTree reader
-	r, err := rtree.NewReader(t, rvars, rtree.WithRange(0, 100))
+	r, err := rtree.NewReader(t, rvars, rtree.WithRange(0, int64(*nEvts)))
 	if err != nil {
 		log.Fatalf("could not create tree reader: %+v", err)
 	}
