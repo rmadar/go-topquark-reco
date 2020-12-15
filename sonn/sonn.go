@@ -15,6 +15,20 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
+// Particle masses (in GeV)
+const (
+	mW      = 80.379
+	mWbar   = 80.379
+	mb      = 4.18
+	mbbar   = 4.18
+	mNu     = 0.0
+	mNubar  = 0.0
+	mTop    = 172.5
+	mTopbar = 172.5
+	mLep    = 0.0
+	mLepbar = 0.0
+)
+
 // Sonnenschein reconstructs ttbar pairs using the Sonnenschein method
 // as described in:
 //  https://arxiv.org/abs/hep-ph/0603011
@@ -76,8 +90,22 @@ func New(fname string, opts ...Option) (*Sonnenschein, error) {
 		s.smearN = 1
 	}
 	
+	if s.debug {
+		fmt.Printf("\n\n")
+		log.Printf("Top Reconstruction Configuration:\n")
+		log.Printf("  - Smearing file      : %v\n", fname)
+		log.Printf("  - Random number seed : %v\n", cfg.rndseed)
+		log.Printf("  - Smearing iterations: %v\n", cfg.smearN)
+		log.Printf("  - Smearing lep pt    : %v\n", cfg.smearLepPt)
+		log.Printf("  - Smearing lep theta : %v\n", cfg.smearLepTheta)
+		log.Printf("  - Smearing lep azimu : %v\n", cfg.smearLepAzimu)
+		log.Printf("  - Smearing jet pt    : %v\n", cfg.smearJetPt)
+		log.Printf("  - Smearing jet theta : %v\n", cfg.smearJetTheta)
+		log.Printf("  - Smearing jet azimu : %v\n\n\n", cfg.smearJetAzimu)
+	}
+
 	// Return the reconstruction object
-	return 	s, nil
+	return s, nil
 }
 
 // smearingHistos holds the histograms used to smear 4-vectors.
@@ -199,20 +227,6 @@ func (sonn *Sonnenschein) Build(
 		lepBarIsMu = iabs(pdgIDLepBar) == 13
 	)
 
-	// particle masses in GeV
-	const (
-		m_W      = 80.379
-		m_Wbar   = 80.379
-		m_b      = 4.18
-		m_bbar   = 4.18
-		m_nu     = 0.0
-		m_nubar  = 0.0
-		m_top    = 172.5
-		m_topbar = 172.5
-		m_lep    = 0.0
-		m_lepbar = 0.0
-	)
-
 	var (
 		jet, jetbar                   fmom.PxPyPzE
 		lep, lepbar                   fmom.PxPyPzE
@@ -225,10 +239,6 @@ func (sonn *Sonnenschein) Build(
 		Vec_Topbar [2][3]float64
 
 		weights_com []float64
-
-		i_analyzed_event int
-
-
 	)
 
 	// loop over jets
@@ -291,14 +301,14 @@ func (sonn *Sonnenschein) Build(
 				lepTLV.Pt()*smear_scale_lep_0,
 				lepTLV.Eta(),
 				lepTLV.Phi(),
-				m_lepbar,
+				mLepbar,
 			)
 
 			lepbar_pt_smear.SetPtEtaPhiM(
 				lepbarTLV.Pt()*smear_scale_lep_1,
 				lepbarTLV.Eta(),
 				lepbarTLV.Phi(),
-				m_lepbar,
+				mLepbar,
 			)
 
 			lep_nosmear = lepTLV
@@ -580,8 +590,7 @@ func (sonn *Sonnenschein) Build(
 			}
 
 			// Actual reconstruction
-			_, topP, topbarP := ttbarSonnenscheinKinem(lep, lepbar, jet, jetbar, Emiss_x_smear, Emiss_y_smear,
-				m_top, m_topbar, m_W, m_Wbar, m_b, m_bbar, m_lep, m_lepbar, m_nu, m_nubar, debug)
+			_, topP, topbarP := ttbarSonnenscheinKinem(lep, lepbar, jet, jetbar, Emiss_x_smear, Emiss_y_smear, debug)
 			
 			var (
 				binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
@@ -619,15 +628,13 @@ func (sonn *Sonnenschein) Build(
 
 			weight_s_sum += weight_s_i1 * weight_s_i2
 
-			i_analyzed_event = 1
-
 			if debug {
 				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
 				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", topP.X, topP.Y, topP.Z)
 				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", topbarP.X, topbarP.Y, topbarP.Z)
 			}
 		}
-
+		
 		if debug {
 			log.Printf("   number of iteration with solutions : %d", nIterations)
 		}
@@ -636,7 +643,7 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	// check whether we found a useful solution
-	if i_analyzed_event != 1 || len(weights_com) == 0 {
+	if len(weights_com) == 0 {
 		return tFinal, tbarFinal, status
 	}
 
@@ -647,7 +654,6 @@ func (sonn *Sonnenschein) Build(
 	var (
 		top_p_sum    r3.Vec
 		topbar_p_sum r3.Vec
-
 		i_weight_sel = 0
 	)
 
@@ -687,8 +693,8 @@ func (sonn *Sonnenschein) Build(
 	}
 
 	var (
-		Top_fin_M    = m_top
-		Topbar_fin_M = m_topbar
+		Top_fin_M    = mTop
+		Topbar_fin_M = mTopbar
 
 		Top_fin_E    = math.Sqrt(r3.Norm2(top_p_sum) + Top_fin_M*Top_fin_M)
 		Topbar_fin_E = math.Sqrt(r3.Norm2(topbar_p_sum) + Topbar_fin_M*Topbar_fin_M)
@@ -741,10 +747,9 @@ func (sonn *Sonnenschein) noSmearing() bool {
 //   4-vector: pLep, pLebar, pJet, pJetbar, etx, ety
 //   masses  : mTop, mTopbar, mW, mWbar, mLep, mLepbar, mNu, mNubar
 // It should return two 3-vectors: p[top] and p[anti-top]
-
 func ttbarSonnenscheinKinem(
-	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64, m_top, m_topbar,
-	m_W, m_Wbar, m_b, m_bbar, m_lep, m_lepbar, m_nu, m_nubar float64, debug bool)  (int, r3.Vec, r3.Vec) {
+	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64,
+	debug bool) (int, r3.Vec, r3.Vec) {
 	
 	var (
 		jet_v    = fmom.VecOf(&jet)
@@ -766,31 +771,31 @@ func ttbarSonnenscheinKinem(
 		mtt_val               []float64
 	)
 
-	a1 := (jet.E()+lepbar.E())*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
-		lepbar.E()*(m_top*m_top-m_b*m_b-m_lepbar*m_lepbar-m_nu*m_nu) +
+	a1 := (jet.E()+lepbar.E())*(mW*mW-mLepbar*mLepbar-mNu*mNu) -
+		lepbar.E()*(mTop*mTop-mb*mb-mLepbar*mLepbar-mNu*mNu) +
 		2*jet.E()*lepbar.E()*lepbar.E() - 2*lepbar.E()*(jet_v.Dot(lepbar_v))
 	a2 := 2 * (jet.E()*lepbar.Px() - lepbar.E()*jet.Px())
 	a3 := 2 * (jet.E()*lepbar.Py() - lepbar.E()*jet.Py())
 	a4 := 2 * (jet.E()*lepbar.Pz() - lepbar.E()*jet.Pz())
 	
-	b1 := (jetbar.E()+lep.E())*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
-		lep.E()*(m_topbar*m_topbar-m_bbar*m_bbar-m_lep*m_lep-m_nubar*m_nubar) +
+	b1 := (jetbar.E()+lep.E())*(mWbar*mWbar-mLep*mLep-mNubar*mNubar) -
+		lep.E()*(mTopbar*mTopbar-mbbar*mbbar-mLep*mLep-mNubar*mNubar) +
 		2.*jetbar.E()*lep.E()*lep.E() - 2.*lep.E()*(jetbar_v.Dot(lep_v))
 	b2 := 2. * (jetbar.E()*lep.Px() - lep.E()*jetbar.Px())
 	b3 := 2. * (jetbar.E()*lep.Py() - lep.E()*jetbar.Py())
 	b4 := 2. * (jetbar.E()*lep.Pz() - lep.E()*jetbar.Pz())
 	
-	c22 := (m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu) -
+	c22 := (mW*mW-mLepbar*mLepbar-mNu*mNu)*(mW*mW-mLepbar*mLepbar-mNu*mNu) -
 		4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a1/a4)*(a1/a4) -
-		4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*lepbar.Pz()*a1/a4
-	c21 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Px()-lepbar.Pz()*a2/a4) -
+		4.*(mW*mW-mLepbar*mLepbar-mNu*mNu)*lepbar.Pz()*a1/a4
+	c21 := 4.*(mW*mW-mLepbar*mLepbar-mNu*mNu)*(lepbar.Px()-lepbar.Pz()*a2/a4) -
 		8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a2/(a4*a4) -
 		8*lepbar.Px()*lepbar.Pz()*a1/a4
 	c20 := -4.*(lepbar.E()*lepbar.E()-lepbar.Px()*lepbar.Px()) -
 		4.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*(a2/a4)*(a2/a4) -
 		8.*lepbar.Px()*lepbar.Pz()*a2/a4
 	
-	c11 := 4.*(m_W*m_W-m_lepbar*m_lepbar-m_nu*m_nu)*(lepbar.Py()-lepbar.Pz()*a3/a4) -
+	c11 := 4.*(mW*mW-mLepbar*mLepbar-mNu*mNu)*(lepbar.Py()-lepbar.Pz()*a3/a4) -
 		8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a1*a3/(a4*a4) -
 		8.*lepbar.Py()*lepbar.Pz()*a1/a4
 	c10 := -8.*(lepbar.E()*lepbar.E()-lepbar.Pz()*lepbar.Pz())*a2*a3/(a4*a4) +
@@ -816,16 +821,16 @@ func ttbarSonnenscheinKinem(
 	c10 *= n44
 	c00 *= n44
 	
-	dp22 := (m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar) -
+	dp22 := (mWbar*mWbar-mLep*mLep-mNubar*mNubar)*(mWbar*mWbar-mLep*mLep-mNubar*mNubar) -
 		4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b1/b4)*(b1/b4) -
-		4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*lep.Pz()*b1/b4
-	dp21 := 4.*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Px()-lep.Pz()*b2/b4) -
+		4.*(mWbar*mWbar-mLep*mLep-mNubar*mNubar)*lep.Pz()*b1/b4
+	dp21 := 4.*(mWbar*mWbar-mLep*mLep-mNubar*mNubar)*(lep.Px()-lep.Pz()*b2/b4) -
 		8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b2/(b4*b4) - 8.*lep.Px()*lep.Pz()*b1/b4
 	dp20 := -4.*(lep.E()*lep.E()-lep.Px()*lep.Px()) -
 		4.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*(b2/b4)*(b2/b4) -
 		8.*lep.Px()*lep.Pz()*b2/b4
 	
-	dp11 := 4*(m_Wbar*m_Wbar-m_lep*m_lep-m_nubar*m_nubar)*(lep.Py()-lep.Pz()*b3/b4) -
+	dp11 := 4*(mWbar*mWbar-mLep*mLep-mNubar*mNubar)*(lep.Py()-lep.Pz()*b3/b4) -
 		8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b1*b3/(b4*b4) -
 		8.*lep.Py()*lep.Pz()*b1/b4
 	dp10 := -8.*(lep.E()*lep.E()-lep.Pz()*lep.Pz())*b2*b3/(b4*b4) +
@@ -937,7 +942,6 @@ func ttbarSonnenscheinKinem(
 		
 		p_nu_y = (c0*d2 - c2*d0) / (c1*d0 - c0*d1)
 		p_nu_z = (-1.*a1 - a2*p_nu_x_close - a3*p_nu_y) / a4
-		// delta_z = nu.Pz() - p_nu_z
 		p_nubar_x = etx - p_nu_x_close
 		p_nubar_y = ety - p_nu_y
 		p_nubar_z = (-1.*b1 - b2*p_nubar_x - b3*p_nubar_y) / b4
