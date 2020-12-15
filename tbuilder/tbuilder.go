@@ -168,7 +168,7 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 
 // Reco performs the reconstruction and return 2 4-momentum
 // (top and anti-top) as well as a status of the reconstruction.
-// Status = 1 (0) means the reconstruction (didn't) work.
+// Status = N (0) means the reconstruction (didn't) work with N succesful iterations.
 // Four-momemtum and missing Et components are in GeV.
 // rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
 // If rndNumbers is not empty, smearing is automatically activated
@@ -245,6 +245,7 @@ func (tb *TopBuilder) Reconstruct(
 		Vec_Topbar [2][3]float64
 
 		weights_com []float64
+		nIterations [2]int
 	)
 
 	// loop over jets
@@ -257,7 +258,7 @@ func (tb *TopBuilder) Reconstruct(
 			log.Printf(" Jets combination %d:", i_jets)
 		}
 
-		nIterations := 0
+		nIterations[i_jets] = 0
 		for i_smear := 0; i_smear < smearN; i_smear++ {
 
 			// All smearing variables
@@ -614,7 +615,7 @@ func (tb *TopBuilder) Reconstruct(
 			//  - increment the number of good iteration
 			//  - compute the weight associated to this jet combination
 			if recoOK {
-				nIterations += 1
+				nIterations[i_jets] += 1
 				
 				switch binx1 {
 				case hbook.UnderflowBin1D:
@@ -643,17 +644,18 @@ func (tb *TopBuilder) Reconstruct(
 			Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*topbarP.Y
 			Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*topbarP.Z
 			
-			weight_s_sum = weight_s_i1 * weight_s_i2
+			weight_s_sum += weight_s_i1 * weight_s_i2
 			
 			if debug {
-				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
 				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", topP.X, topP.Y, topP.Z)
 				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", topbarP.X, topbarP.Y, topbarP.Z)
+				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
+				log.Printf("   weight sum        : %5.3e", weight_s_sum)
 			}
 		}
 		
 		if debug {
-			log.Printf("   number of iteration with solutions : %d", nIterations)
+			log.Printf("   number of iteration with solutions : %d", nIterations[i_jets])
 		}
 
 		// Append this jet combination only 
@@ -672,12 +674,16 @@ func (tb *TopBuilder) Reconstruct(
 	var (
 		top_p_sum    r3.Vec
 		topbar_p_sum r3.Vec
+		nGoodIter = 0
 		i_weight_sel = 0
 	)
 
 	if weights_com[0] > weights_com[1] {
+
 		if weights_com[0] > 0. && Vec_Top[0][0] != 0 {
 
+			nGoodIter = nIterations[0]
+			
 			top_p_sum.X = Vec_Top[0][0] / weights_com[0]
 			top_p_sum.Y = Vec_Top[0][1] / weights_com[0]
 			top_p_sum.Z = Vec_Top[0][2] / weights_com[0]
@@ -687,12 +693,13 @@ func (tb *TopBuilder) Reconstruct(
 			topbar_p_sum.Z = Vec_Topbar[0][2] / weights_com[0]
 
 			i_weight_sel = 1
-
 		}
 
 	} else {
 		if weights_com[1] > 0. && Vec_Top[1][0] != 0 {
 
+			nGoodIter = nIterations[1]
+			
 			top_p_sum.X = Vec_Top[1][0] / weights_com[1]
 			top_p_sum.Y = Vec_Top[1][1] / weights_com[1]
 			top_p_sum.Z = Vec_Top[1][2] / weights_com[1]
@@ -702,7 +709,6 @@ func (tb *TopBuilder) Reconstruct(
 			topbar_p_sum.Z = Vec_Topbar[1][2] / weights_com[1]
 
 			i_weight_sel = 1
-
 		}
 	}
 
@@ -724,7 +730,7 @@ func (tb *TopBuilder) Reconstruct(
 
 	// Status of the reconstruction
 	if !isBad(tFinal) && !isBad(tbarFinal) {
-		status = 1
+		status = nGoodIter
 	}
 
 	if debug {
