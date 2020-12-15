@@ -44,17 +44,17 @@ func ReconstructTops(
 	*top0 = C.P4_t{}
 	*top1 = C.P4_t{}
 
-	t0, t1, ok := bldr.Reconstruct(
+	t0, t1, nIter := bldr.Reconstruct(
 		newPxPyPzE(lep0), newPxPyPzE(lep1), lep0PDG, lep1PDG,
 		newPxPyPzE(jet0), newPxPyPzE(jet1), bjet0 != 0, bjet1 != 0,
 		float64(emissx), float64(emissy),
 	)
 
-	if ok != 0 {
+	if nIter != 0 {
 		*top0 = C.P4_t{C.double(t0.Px()), C.double(t0.Py()), C.double(t0.Pz()), C.double(t0.E())}
 		*top1 = C.P4_t{C.double(t1.Px()), C.double(t1.Py()), C.double(t1.Pz()), C.double(t1.E())}
 	}
-	return ok
+	return nIter
 }
 
 func newPxPyPzE(p4 C.P4_t) fmom.PxPyPzE {

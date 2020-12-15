@@ -107,20 +107,17 @@ void test_root() {
 		}
 
 		// Call the reconstruction
-		Int_t ok = runTopReconstruction(lep0, lep1, lepPID[0], lepPID[1],
-						jet0, jet1, j0b, j1b,
-						double(etx), double(ety),
-						&t, &tbar);
+		Int_t nIter = runTopReconstruction(lep0, lep1, lepPID[0], lepPID[1],
+						   jet0, jet1, j0b, j1b,
+						   double(etx), double(ety),
+						   &t, &tbar);
 		
-		if (ok != 0) {
-			printf("evt: %lld (entry=%d)\n", evtNum, n);
-			printf("t   : (%g, %g, %g, %g)\n",
-			       t.Px(), t.Py(), t.Pz(), t.E()
-			);
-			printf("tbar: (%g, %g, %g, %g)\n",
-			       tbar.Px(), tbar.Py(), tbar.Pz(), tbar.E()
-			);
-			nok++;
+		if (nIter > 0) {
+		  printf("evt: %lld (entry=%d)\n"  , evtNum, n);
+		  printf("Iterations: %d\n", nIter);
+		  printf("t         : (%g, %g, %g, %g)\n", t.Px(), t.Py(), t.Pz(), t.E());
+		  printf("tbar      : (%g, %g, %g, %g)\n", tbar.Px(), tbar.Py(), tbar.Pz(), tbar.E());
+		  nok++;
 		}
 	}
 
