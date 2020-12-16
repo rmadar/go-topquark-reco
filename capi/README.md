@@ -31,8 +31,8 @@ for (Int_t n = 0; n < N	; n++) {
     // Run the reconstruction, return the number of successful
     // smearing iteration averaged to produce the final kinematics.
     Int_t nIter = runTopReconstruction(l0, l1, pid0, pid1,
-       	       		            j0, j1, j0b, j1b,
-				    etx, ety, &t, &tbar);
+       	       		               j0, j1, j0b, j1b,
+				       etx, ety, &t, &tbar);
 }
 ```
 
