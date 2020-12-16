@@ -10,7 +10,7 @@
 //         lep0 fmom.PxPyPzE
 //	   lep1 fmom.PxPyPzE
 //         lid0 int
-//	   lid1 int
+//         lid1 int
 //
 //         // Jets 4-momentum and b-tagging info
 //	   jet0 fmom.PxPyPzE
@@ -21,7 +21,7 @@
 //         // Missing ET
 //         etx  float64
 //         ety  float64
-//	)
+//      )
 //
 //   // Call the reconstruction of top and antitop
 //   t, tbar, nIterations := topBuilder.Reconstruct(
