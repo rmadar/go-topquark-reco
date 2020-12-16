@@ -140,14 +140,14 @@ func main() {
 		Ety := float64(metMet) * sin
 
 		// Call the reconstruction of top and antitop
-		t, tbar, status := topBuilder.Reconstruct(
+		t, tbar, nIterations := topBuilder.Reconstruct(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
 		
 		// Keep track of not reconstructed events
-		if status == 0 {
+		if nIterations == 0 {
 			nBad++
 		}
 
