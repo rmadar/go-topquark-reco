@@ -18,11 +18,11 @@ void test_root() {
 	auto f = TFile::Open("../testdata/data.root");
 	auto t = (TTree*)f->Get("nominal");
 
-	// Init the TopBuilder
+	// Init the TopReconstruction tool
 	auto smearFile = "../testdata/smearingHistos.root";
 	auto nSmearing = 100;
-	auto debugMode = 0;
-	InitTopBuilder((char*)smearFile, nSmearing, debugMode);
+	auto debugMode = false;
+	initTopReconstruction(smearFile, nSmearing, debugMode);
 	
 	const int NLEPS = 10;
 	const int NJETS = 10;

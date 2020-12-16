@@ -7,11 +7,11 @@ The user needs 3 files: `libtopreco.h`, `libtopreco.so` and `topreco.h`. In the 
 ```cpp
 #include "topreco.h"
 
-// Initialization of the topBuilder (before the event loop)
+// Initialization the Top Reconstruction tool (before the event loop)
 auto smearFile = "../testdata/smearingHistos.root";
 auto nSmearing = 100;
-auto debugMode = 0;
-InitTopBuilder((char*)smearFile, nSmearing, debugMode);
+auto debugMode = false;
+initTopReconstruction(smearFile, nSmearing, debugMode);
 
 // Event loop
 for (Int_t n = 0; n < N	; n++) {

@@ -5,10 +5,18 @@ R__LOAD_LIBRARY(./libtopreco.so)
 
 #include "TLorentzVector.h"
 
+// newP4 converts TLorentzVector into a type understood by the tool.
 P4_t newP4(TLorentzVector tlv){
 	return P4_t{tlv.Px(), tlv.Py(), tlv.Pz(), tlv.E()};
 }
 
+// initTopReconstruction initializes the top reconstruction tool
+void initTopReconstruction(string smearFile, int nSmearing, bool debug) {
+  InitTopBuilder((char*)smearFile.c_str(), nSmearing, int(debug));
+}
+
+// runTopReconstruction performs the reconstruction and fill (t, tbar) 4-momentum
+// This function returns the number of successful smearing iteration.
 Int_t runTopReconstruction(TLorentzVector l, TLorentzVector lbar, Int_t pid, Int_t pidbar,
 			   TLorentzVector j, TLorentzVector jbar, Int_t jbtag, Int_t jbarbtag,
 			   double etx, double ety, TLorentzVector *t, TLorentzVector *tbar) {  
