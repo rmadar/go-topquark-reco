@@ -8,15 +8,15 @@
 //  var (
 //         // Lepton 4-momentum and flavour
 //         lep0 fmom.PxPyPzE
-//	   lep1 fmom.PxPyPzE
+//         lep1 fmom.PxPyPzE
 //         lid0 int
 //         lid1 int
 //
 //         // Jets 4-momentum and b-tagging info
-//	   jet0 fmom.PxPyPzE
-//	   jet1 fmom.PxPyPzE
+//         jet0 fmom.PxPyPzE
+//         jet1 fmom.PxPyPzE
 //         j1b  bool
-//	   j2b  bool
+//         j2b  bool
 //
 //         // Missing ET
 //         etx  float64
