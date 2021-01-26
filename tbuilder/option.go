@@ -8,11 +8,11 @@ type Option func(cfg *config)
 type config struct {
 
 	// Seed for random numbers
-	rndseed uint64  
+	rndseed uint64
 
 	// Number of smearing iteration
 	smearN int
-	
+
 	// Select smeared quantities
 	smearAll      bool
 	smearLepPt    bool

@@ -31,7 +31,7 @@ func main() {
 		reco          = flag.String("reco", "sonn", "Select reconstruction method (sonn[enschein]|ell[ipsis])")
 	)
 	flag.Parse()
-	
+
 	// Open the test ROOT file
 	f, err := groot.Open("../testdata/data.root")
 	if err != nil {
@@ -110,7 +110,7 @@ func main() {
 		tbuilder.WithSmearJetAzimu(*smearJetAzimu),
 		recoMeth(),
 	)
-	
+
 	if err != nil {
 		log.Fatalf("could not create the Sonnenschein reco algorithm: %+v", err)
 	}
@@ -158,7 +158,7 @@ func main() {
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
-		
+
 		// Keep track of not reconstructed events
 		if nIterations == 0 {
 			nBad++
@@ -171,7 +171,7 @@ func main() {
 		fmt.Printf("   - final state  %v\n", lepPid)
 		fmt.Printf("   - P4[l]        %v\n", lep0)
 		fmt.Printf("   - P4[lbar]     %v\n", lep1)
-		fmt.Printf("   - P4[top]      %v\n", t   )
+		fmt.Printf("   - P4[top]      %v\n", t)
 		fmt.Printf("   - P4[anti-top] %v\n", tbar)
 		fmt.Printf("\n")
 
