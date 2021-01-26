@@ -29,6 +29,13 @@ const (
 	mLepbar = 0.0
 )
 
+type builderMode byte
+
+const (
+	sonnMode builderMode = iota
+	ellMode
+)
+
 // TopBuilder reconstructs ttbar pairs in dilepton final state.
 // Two methods can be used:
 //  * the Sonnenschein method (https://arxiv.org/abs/hep-ph/0603011)
@@ -46,6 +53,7 @@ type TopBuilder struct {
 	smearJetPt    bool
 	smearJetTheta bool
 	smearJetAzimu bool
+	mode          builderMode
 	debug         bool
 }
 
@@ -86,6 +94,7 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		smearJetTheta: cfg.smearJetTheta,
 		smearJetAzimu: cfg.smearJetAzimu,
 		smearN:        cfg.smearN,
+		mode:          cfg.mode,
 		debug:         cfg.debug,
 	}
 	
@@ -107,7 +116,16 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		log.Printf("  - Smearing lep azimu : %v\n", cfg.smearLepAzimu)
 		log.Printf("  - Smearing jet pt    : %v\n", cfg.smearJetPt)
 		log.Printf("  - Smearing jet theta : %v\n", cfg.smearJetTheta)
-		log.Printf("  - Smearing jet azimu : %v\n\n\n", cfg.smearJetAzimu)
+		log.Printf("  - Smearing jet azimu : %v\n", cfg.smearJetAzimu)
+		switch tb.mode {
+		case sonnMode:
+			log.Printf("  - Mode :               Sonnenschein\n\n\n")
+		case ellMode:
+			log.Printf("  - Mode :               Ellipsis\n\n\n")
+		default:
+			log.Printf("invalid builder mode %d", tb.mode)
+			return nil, fmt.Errorf("invalid builder mode (v=%d)", tb.mode)
+		}
 	}
 
 	// Return the reconstruction object
@@ -597,12 +615,36 @@ func (tb *TopBuilder) Reconstruct(
 			}
 
 			// Actual reconstruction
-			recoOK, topP, topbarP := sonnenschein(
-				lep, lepbar,
-				jet, jetbar,
-				Emiss_x_smear, Emiss_y_smear,
-				debug,
+			var (
+				recoOK        bool
+				topP, topbarP r3.Vec
 			)
+			switch tb.mode {
+			case sonnMode:
+				topP, topbarP, recoOK = sonnenschein(
+					lep, lepbar,
+					jet, jetbar,
+					Emiss_x_smear, Emiss_y_smear,
+					debug,
+				)
+			case ellMode:
+				const (
+					mWbos    = 80.379
+					mWbosbar = 80.379
+					mNu      = 0.0
+					mNubar   = 0.0
+					mTop     = 172.5
+					mTopbar  = 172.5
+				)
+				ell := newEllipsisBuilder(
+					lep, lepbar,
+					jet, jetbar,
+					Emiss_x_smear, Emiss_y_smear,
+					mTop, mTopbar, mWbos, mWbosbar, mNu, mNubar,
+					debug,
+				)
+				topP, topbarP, recoOK = ell.run()
+			}
 
 			var (
 				binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
@@ -757,12 +799,11 @@ func isBad(t fmom.PxPyPzE) bool {
 	return isDefault || isEmpty
 }
 
-
 // Internal function performing the Sonnenschein reconsruction.
 func sonnenschein(
 	lep, lepbar, jet, jetbar fmom.PxPyPzE, etx, ety float64,
-	debug bool) (bool, r3.Vec, r3.Vec) {
-	
+	debug bool) (r3.Vec, r3.Vec, bool) {
+
 	var (
 		jet_v    = fmom.VecOf(&jet)
 		lep_v    = fmom.VecOf(&lep)
@@ -934,10 +975,12 @@ func sonnenschein(
 
 	// If no solution, return default values.
 	if nSolutions == 0 {
-		return false,
-			r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz},
-			r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
-		
+		var (
+			t1 = r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz}
+			t2 = r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
+			ok bool
+		)
+		return t1, t2, ok
 	}
 
 	// Select solutions
@@ -994,5 +1037,5 @@ func sonnenschein(
 	topP    := r3.Vec{X: Top_reco_px, Y: Top_reco_py, Z: Top_reco_pz}
 	topbarP := r3.Vec{X: Topbar_reco_px, Y: Topbar_reco_py, Z: Topbar_reco_pz}
 
-	return nSolutions>0, topP, topbarP
+	return topP, topbarP, nSolutions > 0
 }
