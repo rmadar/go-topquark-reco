@@ -601,12 +601,12 @@ func (tb *TopBuilder) Reconstruct(
 					jetbar.Pz(),
 				)
 				log.Printf("   MET        Pt, Px, Py : %5.3f, %5.3f, %5.3f",
-					math.Sqrt(Emiss_x_nosmear*Emiss_x_nosmear+Emiss_y_nosmear*Emiss_y_nosmear),
+					math.Hypot(Emiss_x_nosmear, Emiss_y_nosmear),
 					Emiss_x_nosmear,
 					Emiss_y_nosmear,
 				)
 				log.Printf("                   after : %5.3f, %5.3f, %5.3f",
-					math.Sqrt(Emiss_x_smear*Emiss_x_smear+Emiss_y_smear*Emiss_y_smear),
+					math.Hypot(Emiss_x_smear, Emiss_y_smear),
 					Emiss_x_smear,
 					Emiss_y_smear,
 				)
