@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 
 	"go-hep.org/x/hep/fmom"
 	"go-hep.org/x/hep/groot"
@@ -27,9 +28,10 @@ func main() {
 		smearJetPt    = flag.Bool("smearJetPt", false, "Enable jet pT smearing")
 		smearJetTheta = flag.Bool("smearJetTheta", false, "Enable jet polar angle smearing")
 		smearJetAzimu = flag.Bool("smearJetAzimy", false, "Enable jet azimuth angle smearing")
+		reco          = flag.String("reco", "sonn", "Select reconstruction method (sonn[enschein]|ell[ipsis])")
 	)
 	flag.Parse()
-	
+
 	// Open the test ROOT file
 	f, err := groot.Open("../testdata/data.root")
 	if err != nil {
@@ -84,7 +86,17 @@ func main() {
 		log.Fatalf("could not create tree reader: %+v", err)
 	}
 	defer r.Close()
-	
+
+	var recoMeth func() tbuilder.Option
+	switch mode := strings.ToLower(*reco); {
+	case strings.HasPrefix(mode, "sonn"):
+		recoMeth = tbuilder.WithSonnenschein
+	case strings.HasPrefix(mode, "ell"):
+		recoMeth = tbuilder.WithEllipsis
+	default:
+		log.Panicf("unknown reconstruction method %q", *reco)
+	}
+
 	// create a Sonnenschein reco algorithm.
 	topBuilder, err := tbuilder.New("../testdata/smearingHistos.root",
 		tbuilder.WithDebug(*debug),
@@ -96,8 +108,9 @@ func main() {
 		tbuilder.WithSmearJetPt(*smearJetPt),
 		tbuilder.WithSmearJetTheta(*smearJetTheta),
 		tbuilder.WithSmearJetAzimu(*smearJetAzimu),
+		recoMeth(),
 	)
-	
+
 	if err != nil {
 		log.Fatalf("could not create the Sonnenschein reco algorithm: %+v", err)
 	}
@@ -145,7 +158,7 @@ func main() {
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
-		
+
 		// Keep track of not reconstructed events
 		if nIterations == 0 {
 			nBad++
@@ -158,7 +171,7 @@ func main() {
 		fmt.Printf("   - final state  %v\n", lepPid)
 		fmt.Printf("   - P4[l]        %v\n", lep0)
 		fmt.Printf("   - P4[lbar]     %v\n", lep1)
-		fmt.Printf("   - P4[top]      %v\n", t   )
+		fmt.Printf("   - P4[top]      %v\n", t)
 		fmt.Printf("   - P4[anti-top] %v\n", tbar)
 		fmt.Printf("\n")
 
