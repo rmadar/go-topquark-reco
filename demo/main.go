@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	// Open the test ROOT file
-	f, err := groot.Open("../testdata/data.root")
+	f, err := groot.Open("../testdata/data2.root")
 	if err != nil {
 		log.Fatalf("could not open ROOT file: %+v", err)
 	}
@@ -62,6 +62,7 @@ func main() {
 		nBjets    int32
 		metMet    float32
 		metPhi    float32
+		//jetIsB    []int32
 
 		rvars = []rtree.ReadVar{
 			{Name: "eventNumber", Value: &evtNum},
@@ -140,7 +141,7 @@ func main() {
 		}
 
 		// Prepare jet four vectors and b-tagg info based on the 2 leading jets
-		jet0.SetPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[1]), float64(jetE[0]))
+		jet0.SetPtEtaPhiE(float64(jetPt[0]), float64(jetEta[0]), float64(jetPhi[0]), float64(jetE[0]))
 		jet1.SetPtEtaPhiE(float64(jetPt[1]), float64(jetEta[1]), float64(jetPhi[1]), float64(jetE[1]))
 		var (
 			j1b = jetMV2c10[0] > 0.691
