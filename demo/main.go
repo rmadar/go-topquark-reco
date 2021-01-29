@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	// Open the test ROOT file
-	f, err := groot.Open("../testdata/data2.root")
+	f, err := groot.Open("../testdata/data.root")
 	if err != nil {
 		log.Fatalf("could not open ROOT file: %+v", err)
 	}
