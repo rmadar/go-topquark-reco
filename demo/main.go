@@ -168,6 +168,7 @@ func main() {
 		fmt.Printf("Entry %d:\n", ctx.Entry)
 		fmt.Printf("   - Evt number   %v\n", evtNum)
 		fmt.Printf("   - N[b-jets]    %v\n", nBjets)
+		fmt.Printf("   - b-tagging:   1st=%v, 2nd=%v\n", j1b, j2b)
 		fmt.Printf("   - final state  %v\n", lepPid)
 		fmt.Printf("   - P4[l]        %v\n", lep0)
 		fmt.Printf("   - P4[lbar]     %v\n", lep1)

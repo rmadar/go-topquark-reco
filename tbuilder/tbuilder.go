@@ -83,7 +83,7 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		cfg.smearJetAzimu = true
 	}
 
-	// Create the sonnenschein object
+	// Create the TopBuilder object
 	tb := &TopBuilder{
 		smearer:       sh,
 		rnd:           rand.New(rand.NewSource(cfg.rndseed)),
@@ -626,22 +626,12 @@ func (tb *TopBuilder) Reconstruct(
 					debug,
 				)
 			case ellMode:
-				const (
-					mWbos    = 80.379
-					mWbosbar = 80.379
-					mNu      = 0.0
-					mNubar   = 0.0
-					mTop     = 172.5
-					mTopbar  = 172.5
-				)
-				ell := newEllipsisBuilder(
+				topP, topbarP, recoOK = ellipsis(
 					lep, lepbar,
 					jet, jetbar,
 					Emiss_x_smear, Emiss_y_smear,
-					mTop, mTopbar, mWbos, mWbosbar, mNu, mNubar,
 					debug,
 				)
-				topP, topbarP, recoOK = ell.run()
 			}
 
 			var (

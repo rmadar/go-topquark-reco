@@ -13,25 +13,13 @@ import (
 func ellipsis(
 	lep, lepbar, jet, jetbar fmom.PxPyPzE,
 	etx, ety float64,
-	mTop, mTopbar, mWbos, mWbosbar, mNu, mNubar float64,
 	debug bool) (r3.Vec, r3.Vec, bool) {
 
-	bldr := newEllipsisBuilder(
-		lep, lepbar, jet, jetbar,
-		etx, ety,
-		mTop, mTopbar, mWbos, mWbosbar, mNu, mNubar,
-		debug)
+	bldr := newEllipsisBuilder(lep, lepbar, jet, jetbar, etx, ety, debug)
 	return bldr.run()
 }
 
 type ellipsisBuilder struct {
-	mt     float64
-	mtbar  float64
-	mw     float64
-	mwbar  float64
-	mnu    float64
-	mnubar float64
-
 	lep     fmom.PxPyPzE
 	lepbar  fmom.PxPyPzE
 	bjet    fmom.PxPyPzE
@@ -46,16 +34,9 @@ type ellipsisBuilder struct {
 func newEllipsisBuilder(
 	lep, lepbar, jet, jetbar fmom.PxPyPzE,
 	etx, ety float64,
-	mTop, mTopbar, mw, mwbar, mnu, mnubar float64,
+	//mTop, mTopbar, mw, mwbar, mnu, mnubar float64,
 	debug bool) *ellipsisBuilder {
 	return &ellipsisBuilder{
-		mt:     mTop,
-		mtbar:  mTopbar,
-		mw:     mw,
-		mwbar:  mwbar,
-		mnu:    mnu,
-		mnubar: mnubar,
-
 		lep:     lep,
 		lepbar:  lepbar,
 		bjet:    jet,
@@ -85,8 +66,7 @@ var (
 
 func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 	nuEllCalc := newNeutrinoEllipseCalculator(
-		bldr.bjet, bldr.lepbar,
-		bldr.mt, bldr.mw, bldr.mnu,
+		bldr.bjet, bldr.lepbar,	mTop, mW, mNu,
 	)
 	nPerp := nuEllCalc.getNeutrinoEllipse()
 	if mat.Equal(nPerp, zero3x3) {
@@ -94,8 +74,7 @@ func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 	}
 
 	nubarEllCalc := newNeutrinoEllipseCalculator(
-		bldr.bjetbar, bldr.lep,
-		bldr.mtbar, bldr.mwbar, bldr.mnubar,
+		bldr.bjetbar, bldr.lep, mTopbar, mWbar, mNubar,
 	)
 	nbarPerp := nubarEllCalc.getNeutrinoEllipse()
 	if mat.Equal(nbarPerp, zero3x3) {
@@ -119,23 +98,6 @@ func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 
 	switch len(nuPerps) {
 	case 0:
-		//		// compute n_perp ellipse's eccentricity
-		//		n_perp22 := mat.NewDense(2, 2, nil)
-		//		n_perp22.Set(0, 0, nu_perp[0].X)
-		//		n_perp22.Set(0, 1, nu_perp[0].Y)
-		//		n_perp22.Set(1, 0, nu_perp[1].X)
-		//		n_perp22.Set(1, 1, nu_perp[1].Y)
-		//
-		//		var n_p22_eig mat.Eigen
-		//		if !n_p22_eig.Factorize(n_perp22, mat.EigenNone) {
-		//			panic("could not factorize eigen values")
-		//		}
-		//
-		//		var (
-		//			eigs = n_p22_eig.Values(nil)
-		//			ecc  = math.Sqrt(1 - real(eigs[1])/real(eigs[0]))
-		//		)
-
 		var (
 			hperp = nubarEllCalc.hperp
 			xp    = mat.NewDense(3, 3, nil)
