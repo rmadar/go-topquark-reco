@@ -372,7 +372,7 @@ func intersectEllLine(pts []r3.Vec, a *mat.Dense, line r3.Vec) []r3.Vec {
 		LxE.Set(2, j, L.AtVec(0)*E.At(1, j)-L.AtVec(1)*E.At(0, j))
 	}
 
-	if !eig.Factorize(LxE, mat.EigenLeft) {
+	if !eig.Factorize(LxE, mat.EigenRight) {
 		panic("could not factorize eigen vectors")
 	}
 
@@ -385,7 +385,7 @@ func intersectEllLine(pts []r3.Vec, a *mat.Dense, line r3.Vec) []r3.Vec {
 		eigs mat.CDense
 		sols = make([]ksolT, 0, 3)
 	)
-	eig.LeftVectorsTo(&eigs)
+	eig.VectorsTo(&eigs)
 
 	for j := 0; j < 3; j++ {
 		v := r3.Vec{
