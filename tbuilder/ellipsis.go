@@ -99,7 +99,7 @@ func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 	switch len(nuPerps) {
 	case 0:
 		var (
-			hperp = nubarEllCalc.hperp
+			hperp = nuEllCalc.hperp
 			xp    = mat.NewDense(3, 3, nil)
 		)
 
@@ -523,7 +523,7 @@ func factorDegenerate(g *mat.Dense) []r3.Vec {
 
 		if swapXY {
 			lp.X, lp.Y = lp.Y, lp.X
-			lm.X, lm.Y = lm.Y, lm.Y
+			lm.X, lm.Y = lm.Y, lm.X
 		}
 	}
 
