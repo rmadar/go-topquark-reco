@@ -99,7 +99,7 @@ func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 	switch len(nuPerps) {
 	case 0:
 		var (
-			hperp = nubarEllCalc.hperp
+			hperp = nuEllCalc.hperp
 			xp    = mat.NewDense(3, 3, nil)
 		)
 
@@ -139,9 +139,7 @@ func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 			tmp   = make([]float64, 3)
 		)
 		for i := range sols {
-			sol := mat.NewVecDense(3, []float64{
-				sols[i].X, sols[i].Y, sols[i].Z,
-			})
+			sol := vecDenseFrom(sols[i])
 			for j := 0; j < 3; j++ {
 				col := mat.NewVecDense(3, mat.Col(tmp, j, xp))
 				tX.SetVec(j, mat.Dot(sol, col))
@@ -334,6 +332,19 @@ func intersectEllEll(a, b *mat.Dense) []r3.Vec {
 		eigVs = make([]complex128, 3)
 	)
 	eigen.Values(eigVs)
+	sort.Slice(eigVs, func(i, j int) bool {
+		vi := eigVs[i]
+		ri := real(vi)
+		ii := imag(vi)
+		ni := ri*ri + ii*ii
+
+		vj := eigVs[j]
+		rj := real(vj)
+		ij := imag(vj)
+		nj := rj*rj + ij*ij
+		return ni > nj
+	})
+
 	for i, v := range eigVs {
 		if imag(v) != 0 {
 			continue
@@ -384,14 +395,42 @@ func intersectEllLine(pts []r3.Vec, a *mat.Dense, line r3.Vec) []r3.Vec {
 	var (
 		eigs mat.CDense
 		sols = make([]ksolT, 0, 3)
+		evls = make([]complex128, 3)
 	)
+	eig.Values(evls)
 	eig.VectorsTo(&eigs)
+	type esolT struct {
+		v  complex128
+		vs []complex128
+	}
+	esols := make([]esolT, 3)
+	for i := range esols {
+		esols[i].v = evls[i]
+		esols[i].vs = []complex128{
+			eigs.At(0, i),
+			eigs.At(1, i),
+			eigs.At(2, i),
+		}
+	}
 
-	for j := 0; j < 3; j++ {
+	sort.Slice(esols, func(i, j int) bool {
+		vi := esols[i].v
+		ri := real(vi)
+		ii := imag(vi)
+		ni := ri*ri + ii*ii
+
+		vj := esols[j].v
+		rj := real(vj)
+		ij := imag(vj)
+		nj := rj*rj + ij*ij
+		return ni > nj
+	})
+
+	for _, esol := range esols {
 		v := r3.Vec{
-			X: real(eigs.At(0, j)),
-			Y: real(eigs.At(1, j)),
-			Z: real(eigs.At(2, j)),
+			X: real(esol.vs[0]),
+			Y: real(esol.vs[1]),
+			Z: real(esol.vs[2]),
 		}
 		v = v.Scale(1 / r3.Norm2(v))
 		lv := line.Dot(v)
@@ -523,7 +562,7 @@ func factorDegenerate(g *mat.Dense) []r3.Vec {
 
 		if swapXY {
 			lp.X, lp.Y = lp.Y, lp.X
-			lm.X, lm.Y = lm.Y, lm.Y
+			lm.X, lm.Y = lm.Y, lm.X
 		}
 	}
 
