@@ -334,6 +334,19 @@ func intersectEllEll(a, b *mat.Dense) []r3.Vec {
 		eigVs = make([]complex128, 3)
 	)
 	eigen.Values(eigVs)
+	sort.Slice(eigVs, func(i, j int) bool {
+		vi := eigVs[i]
+		ri := real(vi)
+		ii := imag(vi)
+		ni := ri*ri + ii*ii
+
+		vj := eigVs[j]
+		rj := real(vj)
+		ij := imag(vj)
+		nj := rj*rj + ij*ij
+		return ni > nj
+	})
+
 	for i, v := range eigVs {
 		if imag(v) != 0 {
 			continue
