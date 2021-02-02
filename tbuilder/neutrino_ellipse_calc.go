@@ -1,6 +1,7 @@
 package tbuilder
 
 import (
+	"fmt"
 	"math"
 
 	"go-hep.org/x/hep/fmom"
@@ -161,7 +162,7 @@ func (nec *neutrinoEllipseCalculator) neutrinoSolution() {
 
 func (nec *neutrinoEllipseCalculator) labSystemTransform() {
 	Rz := rotationMatrix(2, -nec.lep.Phi())
-	Ry := rotationMatrix(1, 0.5*math.Pi*thetaOf(&nec.lep))
+	Ry := rotationMatrix(1, 0.5*math.Pi-thetaOf(&nec.lep))
 	bJetP := fmom.VecOf(&nec.bjet)
 	bJet_xyz := mat.NewVecDense(3, []float64{bJetP.X, bJetP.Y, bJetP.Z})
 
@@ -242,31 +243,27 @@ func thetaOf(p4 fmom.P4) float64 {
 }
 
 func rotationMatrix(axis int, angle float64) *mat.Dense {
-	r := mat.NewDense(3, 3, nil)
-	switch axis {
-	case 0, 1, 2:
-		// ok.
-	default:
-		return r
-	}
 	sin, cos := math.Sincos(angle)
-
-	for i := 0; i < 3; i++ {
-		r.Set(i, i, cos)
+	switch axis {
+	case 0:
+		return mat.NewDense(3, 3, []float64{
+			1, 0, 0,
+			0, +cos, -sin,
+			0, +sin, +cos,
+		})
+	case 1:
+		return mat.NewDense(3, 3, []float64{
+			+cos, 0, +sin,
+			0, 1, 0,
+			-sin, 0, +cos,
+		})
+	case 2:
+		return mat.NewDense(3, 3, []float64{
+			+cos, -sin, 0,
+			+sin, +cos, 0,
+			0, 0, 1,
+		})
+	default:
+		panic(fmt.Errorf("invalid axis=%d", axis))
 	}
-	for i := -1; i <= 1; i++ {
-		row := (axis - i) % 3
-		if row < 0 {
-			row += 3
-		}
-
-		col := (axis + i) % 3
-		if col < 0 {
-			col += 3
-		}
-
-		r.Set(row, col, float64(i)*sin+(float64(1-i*i)))
-	}
-
-	return r
 }
