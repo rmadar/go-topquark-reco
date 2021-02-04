@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"strings"
-
+	//"strings"
+	
 	"go-hep.org/x/hep/fmom"
 	"go-hep.org/x/hep/groot"
 	"go-hep.org/x/hep/groot/rtree"
@@ -28,7 +28,6 @@ func main() {
 		smearJetPt    = flag.Bool("smearJetPt", false, "Enable jet pT smearing")
 		smearJetTheta = flag.Bool("smearJetTheta", false, "Enable jet polar angle smearing")
 		smearJetAzimu = flag.Bool("smearJetAzimy", false, "Enable jet azimuth angle smearing")
-		reco          = flag.String("reco", "sonn", "Select reconstruction method (sonn[enschein]|ell[ipsis])")
 	)
 	flag.Parse()
 
@@ -48,7 +47,10 @@ func main() {
 
 	// Get variables to read
 	var (
-		nBad      = 0
+		nBadSon   = 0
+		nBadEll   = 0
+		nBadSonO  = 0
+		nBadEllO  = 0
 		evtNum    int64
 		lepPt     []float32
 		lepEta    []float32
@@ -62,7 +64,6 @@ func main() {
 		nBjets    int32
 		metMet    float32
 		metPhi    float32
-		//jetIsB    []int32
 
 		rvars = []rtree.ReadVar{
 			{Name: "eventNumber", Value: &evtNum},
@@ -88,16 +89,6 @@ func main() {
 	}
 	defer r.Close()
 
-	var recoMeth func() tbuilder.Option
-	switch mode := strings.ToLower(*reco); {
-	case strings.HasPrefix(mode, "sonn"):
-		recoMeth = tbuilder.WithSonnenschein
-	case strings.HasPrefix(mode, "ell"):
-		recoMeth = tbuilder.WithEllipsis
-	default:
-		log.Panicf("unknown reconstruction method %q", *reco)
-	}
-
 	// create a Sonnenschein reco algorithm.
 	topBuilder, err := tbuilder.New("../testdata/smearingHistos.root",
 		tbuilder.WithDebug(*debug),
@@ -109,7 +100,6 @@ func main() {
 		tbuilder.WithSmearJetPt(*smearJetPt),
 		tbuilder.WithSmearJetTheta(*smearJetTheta),
 		tbuilder.WithSmearJetAzimu(*smearJetAzimu),
-		recoMeth(),
 	)
 
 	if err != nil {
@@ -153,18 +143,38 @@ func main() {
 		Etx := float64(metMet) * cos
 		Ety := float64(metMet) * sin
 
-		// Call the reconstruction of top and antitop
-		t, tbar, nIterations := topBuilder.Reconstruct(
+		// Call the Sonnenschein reconstruction of top and antitop
+		t, tbar, nIterations := topBuilder.AllReco(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
 
 		// Keep track of not reconstructed events
-		if nIterations == 0 {
-			nBad++
+		if nIterations[0] == 0 {
+			nBadSon++
+		}
+		if nIterations[1] == 0 {
+			nBadEll++
 		}
 
+		_, _, nIterSO := topBuilder.SonnReco(
+			lep0, lep1, lid0, lid1,
+			jet0, jet1, j1b, j2b,
+			Etx, Ety,
+		)
+		if nIterSO == 0 {
+			nBadSonO++
+		}
+		_, _, nIterEL := topBuilder.ElliReco(
+			lep0, lep1, lid0, lid1,
+			jet0, jet1, j1b, j2b,
+			Etx, Ety,
+		)
+		if nIterEL == 0 {
+			nBadEllO++
+		}
+		
 		// Print some information
 		fmt.Printf("Entry %d:\n", ctx.Entry)
 		fmt.Printf("   - Evt number   %v\n", evtNum)
@@ -176,11 +186,13 @@ func main() {
 		fmt.Printf("   - P4[top]      %v\n", t)
 		fmt.Printf("   - P4[anti-top] %v\n", tbar)
 		fmt.Printf("\n")
-
+		
 		return nil
 	})
 
-	fmt.Printf("Number of events w/o reconstruction: %v\n\n", nBad)
+	fmt.Printf("Number of events w/o reconstruction: \n")
+	fmt.Printf("  * Sonnenschein: %v (allMode), %v (SonMode)\n", nBadSon, nBadSonO)
+	fmt.Printf("  * Ellipsis    : %v (allMode), %v (EllMode)\n", nBadEll, nBadEllO)
 
 	if err != nil {
 		log.Fatalf("could not process tree: %+v", err)
