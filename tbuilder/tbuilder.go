@@ -260,7 +260,7 @@ func (tb *TopBuilder) reconstruct(
 	var (
 		Vec_Top     [2][2]r3.Vec
 		Vec_Topbar  [2][2]r3.Vec
-		weights_com [2][]float64
+		weights_com [2][2]float64
 		nIterations [2][2]int
 	)
 
@@ -646,7 +646,7 @@ func (tb *TopBuilder) reconstruct(
 			Vec_Top[i_jets][recoMode] = p3t
 			Vec_Topbar[i_jets][recoMode] = p3tbar
 			nIterations[i_jets][recoMode] = nIter
-			weights_com[recoMode] = append(weights_com[recoMode], w)
+			weights_com[recoMode][i_jets] = w
 		}
 
 		// Ellipse: run the reconstruction over all smearing iterations and combined them.
@@ -656,7 +656,7 @@ func (tb *TopBuilder) reconstruct(
 			Vec_Top[i_jets][recoMode] = p3t
 			Vec_Topbar[i_jets][recoMode] = p3tbar
 			nIterations[i_jets][recoMode] = nIter
-			weights_com[recoMode] = append(weights_com[recoMode], w)
+			weights_com[recoMode][i_jets] = w
 		}
 
 		if debug {
@@ -666,9 +666,10 @@ func (tb *TopBuilder) reconstruct(
 
 	// Check whether we found a useful solution,
 	// depending of which reco were ran.
-	sonFails := len(weights_com[0]) == 0 && tb.mode == sonnMode
-	ellFails := len(weights_com[1]) == 0 && tb.mode == ellMode
-	allFails := len(weights_com[0]) == 0 && len(weights_com[1]) == 0 && tb.mode == allMode
+	zeros := [2]float64{0.0, 0.0}
+	sonFails := weights_com[0] == zeros && tb.mode == sonnMode
+	ellFails := weights_com[1] == zeros && tb.mode == ellMode
+	allFails := weights_com[0] == zeros && weights_com[1] == zeros && tb.mode == allMode
 	if sonFails || ellFails || allFails {
 		return tFinal, tbarFinal, status
 	}
@@ -682,7 +683,7 @@ func (tb *TopBuilder) reconstruct(
 	for iReco := 0; iReco < 2; iReco++ {
 
 		// Just skip, if there is no weights for the current method
-		if len(weights_com[iReco]) == 0 {
+		if weights_com[iReco] == zeros {
 			continue
 		}
 
@@ -694,7 +695,7 @@ func (tb *TopBuilder) reconstruct(
 		} else if wJet2 > 0. && Vec_Top[1][iReco].X != 0 {
 			jetComb = 1
 		} else {
-			return tFinal, tbarFinal, status
+			continue
 		}
 
 		// Get the final top 4-momenta for the current method
@@ -745,7 +746,7 @@ func recoCombineIters(
 	case ellMode:
 		reco = ellipsis
 	default:
-		panic("wrong [FIXE this error message]")
+		panic("FIX THIS ERROR MESSAGE")
 	}
 
 	// Loop over iterations

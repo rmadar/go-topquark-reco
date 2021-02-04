@@ -143,14 +143,13 @@ func main() {
 		Etx := float64(metMet) * cos
 		Ety := float64(metMet) * sin
 
-		// Call the Sonnenschein reconstruction of top and antitop
+		// Call both reconstructions of top and antitop
 		t, tbar, nIterations := topBuilder.AllReco(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
 			Etx, Ety,
 		)
 
-		// Keep track of not reconstructed events
 		if nIterations[0] == 0 {
 			nBadSon++
 		}
@@ -158,6 +157,7 @@ func main() {
 			nBadEll++
 		}
 
+		// Run Sonnenschein alone
 		_, _, nIterSO := topBuilder.SonnReco(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
@@ -166,6 +166,8 @@ func main() {
 		if nIterSO == 0 {
 			nBadSonO++
 		}
+
+		// Run Ellipse alone
 		_, _, nIterEL := topBuilder.ElliReco(
 			lep0, lep1, lid0, lid1,
 			jet0, jet1, j1b, j2b,
