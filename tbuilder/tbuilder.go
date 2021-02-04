@@ -32,8 +32,10 @@ const (
 type builderMode byte
 
 const (
-	sonnMode builderMode = iota
+	undefined builderMode = iota
+	sonnMode 
 	ellMode
+	allMode
 )
 
 // TopBuilder reconstructs ttbar pairs in dilepton final state.
@@ -94,8 +96,8 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		smearJetTheta: cfg.smearJetTheta,
 		smearJetAzimu: cfg.smearJetAzimu,
 		smearN:        cfg.smearN,
-		mode:          cfg.mode,
 		debug:         cfg.debug,
+		mode:          undefined,
 	}
 
 	// Set the number of iteration to 1.0 if smearing is disabeld
@@ -116,16 +118,20 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		log.Printf("  - Smearing lep azimu : %v\n", cfg.smearLepAzimu)
 		log.Printf("  - Smearing jet pt    : %v\n", cfg.smearJetPt)
 		log.Printf("  - Smearing jet theta : %v\n", cfg.smearJetTheta)
-		log.Printf("  - Smearing jet azimu : %v\n", cfg.smearJetAzimu)
+		log.Printf("  - Smearing jet azimu : %v\n\n\n", cfg.smearJetAzimu)
+		/*
 		switch tb.mode {
 		case sonnMode:
 			log.Printf("  - Mode :               Sonnenschein\n\n\n")
 		case ellMode:
 			log.Printf("  - Mode :               Ellipsis\n\n\n")
+		case allMode:
+			log.Printf("  - Mode :               All methods\n\n\n")
 		default:
 			log.Printf("invalid builder mode %d", tb.mode)
 			return nil, fmt.Errorf("invalid builder mode (v=%d)", tb.mode)
 		}
+*/
 	}
 
 	// Return the reconstruction object
@@ -205,10 +211,10 @@ func newSmearingHistos(fname string, seed uint64) (*smearingHistos, error) {
 //     thetaJet1, thetaJet1Bar,
 //     azimuJet1, azimuJet1Bar,
 //   }
-func (tb *TopBuilder) Reconstruct(
+func (tb *TopBuilder) reconstruct(
 	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
 	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
-	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
+	emissx, emissy float64, rdnNumbers ...[12]float64) ([2]fmom.PxPyPzE, [2]fmom.PxPyPzE, [2]int) {
 
 	// Configuration variables
 	var (
@@ -234,9 +240,9 @@ func (tb *TopBuilder) Reconstruct(
 
 	// Ouptut of the algorithm
 	var (
-		tFinal    fmom.PxPyPzE
-		tbarFinal fmom.PxPyPzE
-		status    = 0
+		tFinal    [2]fmom.PxPyPzE
+		tbarFinal [2]fmom.PxPyPzE
+		status    [2]int
 	)
 
 	// run the reconstruction only if the two jets are btags.
@@ -252,34 +258,46 @@ func (tb *TopBuilder) Reconstruct(
 	)
 
 	var (
-		jet, jetbar                   fmom.PxPyPzE
-		lep, lepbar                   fmom.PxPyPzE
-		lep_pt_smear, lepbar_pt_smear fmom.PxPyPzE
-		lep_nosmear, lepbar_nosmear   fmom.PxPyPzE
-		jet_pt_smear, jetbar_pt_smear fmom.PxPyPzE
-		jet_nosmear, jetbar_nosmear   fmom.PxPyPzE
-
-		Vec_Top    [2][3]float64
-		Vec_Topbar [2][3]float64
-
-		weights_com []float64
-		nIterations [2]int
+		Vec_Top     [2][2]r3.Vec
+		Vec_Topbar  [2][2]r3.Vec
+		weights_com [2][]float64
+		nIterations [2][2]int
 	)
 
 	// loop over jets
 	for i_jets := 0; i_jets < 2; i_jets++ {
-		var (
-			weight_s_sum float64
-		)
 
 		if debug {
 			log.Printf(" Jets combination %d:", i_jets)
 		}
 
-		nIterations[i_jets] = 0
+		// Number of iteration (for each reco method)
+		nIterations[i_jets] = [2]int{0, 0}
+
+		// Slices for the smeared kimenatics
+		var (
+			l   = make([]fmom.PxPyPzE, smearN)
+			lb  = make([]fmom.PxPyPzE, smearN)
+			j   = make([]fmom.PxPyPzE, smearN)
+			jb  = make([]fmom.PxPyPzE, smearN)
+			etx = make([]float64, smearN)
+			ety = make([]float64, smearN)
+		)
+
+		// Starting smearing loop
 		for i_smear := 0; i_smear < smearN; i_smear++ {
 
-			// All smearing variables
+			// All four momenta for smearing
+			var (
+				jet, jetbar                   fmom.PxPyPzE
+				lep, lepbar                   fmom.PxPyPzE
+				lep_pt_smear, lepbar_pt_smear fmom.PxPyPzE
+				lep_nosmear, lepbar_nosmear   fmom.PxPyPzE
+				jet_pt_smear, jetbar_pt_smear fmom.PxPyPzE
+				jet_nosmear, jetbar_nosmear   fmom.PxPyPzE
+			)
+			
+			// All random variables to smear variables
 			var (
 				smear_scale_lep_0 = 1.0
 				smear_scale_lep_1 = 1.0
@@ -612,164 +630,314 @@ func (tb *TopBuilder) Reconstruct(
 				)
 			}
 
-			// Actual reconstruction
-			var (
-				recoOK        bool
-				topP, topbarP r3.Vec
-			)
-			switch tb.mode {
-			case sonnMode:
-				topP, topbarP, recoOK = sonnenschein(
-					lep, lepbar,
-					jet, jetbar,
-					Emiss_x_smear, Emiss_y_smear,
-					debug,
-				)
-			case ellMode:
-				topP, topbarP, recoOK = ellipsis(
-					lep, lepbar,
-					jet, jetbar,
-					Emiss_x_smear, Emiss_y_smear,
-					debug,
-				)
-			}
-
-			var (
-				binx1       = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
-				binx2       = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
-				weight_s_i1 = 0.0
-				weight_s_i2 = 0.0
-			)
-
-			// Only if the reconstruction is successful:
-			//  - increment the number of good iteration
-			//  - compute the weight associated to this jet combination
-			if recoOK {
-				nIterations[i_jets] += 1
-
-				switch binx1 {
-				case hbook.UnderflowBin1D:
-					weight_s_i1 = smearHs.Mlblb.Binning.Underflow().SumW()
-				case hbook.OverflowBin1D:
-					weight_s_i1 = smearHs.Mlblb.Binning.Overflow().SumW()
-				default:
-					weight_s_i1 = smearHs.Mlblb.Value(binx1)
-				}
-
-				switch binx2 {
-				case hbook.UnderflowBin1D:
-					weight_s_i2 = smearHs.Mlblb.Binning.Underflow().SumW()
-				case hbook.OverflowBin1D:
-					weight_s_i2 = smearHs.Mlblb.Binning.Overflow().SumW()
-				default:
-					weight_s_i2 = smearHs.Mlblb.Value(binx2)
-				}
-			}
-
-			Vec_Top[i_jets][0] = Vec_Top[i_jets][0] + weight_s_i1*weight_s_i2*topP.X
-			Vec_Top[i_jets][1] = Vec_Top[i_jets][1] + weight_s_i1*weight_s_i2*topP.Y
-			Vec_Top[i_jets][2] = Vec_Top[i_jets][2] + weight_s_i1*weight_s_i2*topP.Z
-
-			Vec_Topbar[i_jets][0] = Vec_Topbar[i_jets][0] + weight_s_i1*weight_s_i2*topbarP.X
-			Vec_Topbar[i_jets][1] = Vec_Topbar[i_jets][1] + weight_s_i1*weight_s_i2*topbarP.Y
-			Vec_Topbar[i_jets][2] = Vec_Topbar[i_jets][2] + weight_s_i1*weight_s_i2*topbarP.Z
-
-			weight_s_sum += weight_s_i1 * weight_s_i2
-
-			if debug {
-				log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", topP.X, topP.Y, topP.Z)
-				log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", topbarP.X, topbarP.Y, topbarP.Z)
-				log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", weight_s_i1, weight_s_i2)
-				log.Printf("   weight sum        : %5.3e", weight_s_sum)
-			}
+			// Fill the slices with smeared kinematics quantites
+			l[i_smear]   = lep
+			lb[i_smear]  = lepbar
+			j[i_smear]   = jet
+			jb[i_smear]  = jetbar
+			etx[i_smear] = Emiss_x_smear
+			ety[i_smear] = Emiss_y_smear
 		}
 
+		// Sonenschein: run the reconstruction over all smearing iterations and combined them.
+		if (tb.mode == sonnMode || tb.mode == allMode) {
+			p3t, p3tbar, w, nIter := recoCombineIters(l, lb, j, jb, etx, ety, sonnMode, tb.smearer, tb.debug)
+			recoMode := 0
+			Vec_Top[i_jets][recoMode]     = p3t
+			Vec_Topbar[i_jets][recoMode]  = p3tbar
+			nIterations[i_jets][recoMode] = nIter
+			weights_com[recoMode]         = append(weights_com[recoMode], w)
+		}
+
+		// Ellipse: run the reconstruction over all smearing iterations and combined them.
+		if (tb.mode == ellMode || tb.mode == allMode) {
+			p3t, p3tbar, w, nIter := recoCombineIters(l, lb, j, jb, etx, ety, ellMode, tb.smearer, tb.debug)
+			recoMode := 1
+			Vec_Top[i_jets][recoMode]     = p3t
+			Vec_Topbar[i_jets][recoMode]  = p3tbar
+			nIterations[i_jets][recoMode] = nIter
+			weights_com[recoMode]         = append(weights_com[recoMode], w)
+		}
+		
 		if debug {
 			log.Printf("   number of iteration with solutions : %d", nIterations[i_jets])
 		}
-
-		// Append this jet combination only
-		weights_com = append(weights_com, weight_s_sum)
 	}
-
-	// check whether we found a useful solution
-	if len(weights_com) == 0 {
+	
+	// Check whether we found a useful solution,
+	// depending of which reco were ran.
+	sonFails := len(weights_com[0]) == 0 && tb.mode == sonnMode
+	ellFails := len(weights_com[1]) == 0 && tb.mode == ellMode
+	allFails := len(weights_com[0]) == 0 && len(weights_com[1]) == 0 && tb.mode == allMode
+	if sonFails || ellFails || allFails {
 		return tFinal, tbarFinal, status
 	}
-
+	
 	if debug {
 		log.Printf(" Weight sum of jet combinatorics (0, 1): %5.2e, %5.2e", weights_com[0], weights_com[1])
 	}
 
-	var (
-		top_p_sum    r3.Vec
-		topbar_p_sum r3.Vec
-		nGoodIter    = 0
-		i_weight_sel = 0
-	)
+	// Jet combination selection, for each reconstruction.
+	methodName := [2]string{"Sonnenschein", "Ellipsis"}
+	for iReco := 0; iReco < 2; iReco++ {
 
-	if weights_com[0] > weights_com[1] {
-
-		if weights_com[0] > 0. && Vec_Top[0][0] != 0 {
-
-			nGoodIter = nIterations[0]
-
-			top_p_sum.X = Vec_Top[0][0] / weights_com[0]
-			top_p_sum.Y = Vec_Top[0][1] / weights_com[0]
-			top_p_sum.Z = Vec_Top[0][2] / weights_com[0]
-
-			topbar_p_sum.X = Vec_Topbar[0][0] / weights_com[0]
-			topbar_p_sum.Y = Vec_Topbar[0][1] / weights_com[0]
-			topbar_p_sum.Z = Vec_Topbar[0][2] / weights_com[0]
-
-			i_weight_sel = 1
+		// Just skip, if there is no weights for the current method
+		if len(weights_com[iReco]) == 0 {
+			continue
 		}
+		
+		// Get the best jet combinatorics index
+		jetComb  := -1
+		wJet1, wJet2 := weights_com[iReco][0], weights_com[iReco][1]
+		if wJet1 > wJet2 {
+			jetComb = 0
+		} else if wJet2 > 0. && Vec_Top[1][iReco].X != 0 {
+			jetComb = 1
+		} else {
+			return tFinal, tbarFinal, status
+		}	
 
-	} else {
-		if weights_com[1] > 0. && Vec_Top[1][0] != 0 {
+		// Get the final top 4-momenta for the current method
+		pt, ptb := Vec_Top[jetComb][iReco], Vec_Topbar[jetComb][iReco]
+		Top_fin_E    := math.Sqrt(r3.Norm2(pt) + mTop*mTop)
+		Topbar_fin_E := math.Sqrt(r3.Norm2(ptb) + mTopbar*mTopbar)
+		tFinal[iReco] = fmom.NewPxPyPzE(pt.X, pt.Y, pt.Z, Top_fin_E)
+		tbarFinal[iReco] = fmom.NewPxPyPzE(ptb.X, ptb.Y, ptb.Z, Topbar_fin_E)
 
-			nGoodIter = nIterations[1]
-
-			top_p_sum.X = Vec_Top[1][0] / weights_com[1]
-			top_p_sum.Y = Vec_Top[1][1] / weights_com[1]
-			top_p_sum.Z = Vec_Top[1][2] / weights_com[1]
-
-			topbar_p_sum.X = Vec_Topbar[1][0] / weights_com[1]
-			topbar_p_sum.Y = Vec_Topbar[1][1] / weights_com[1]
-			topbar_p_sum.Z = Vec_Topbar[1][2] / weights_com[1]
-
-			i_weight_sel = 1
+		// Status of the reconstruction
+		if !isBad(tFinal[iReco]) && !isBad(tbarFinal[iReco]) {
+			status[iReco] = nIterations[jetComb][iReco]
+		}
+		
+		if debug {
+			log.Printf(" %v method:\n", methodName[iReco])
+			log.Printf("  Final P[t]   : %v, M=%v", tFinal[iReco], tFinal[iReco].M())
+			log.Printf("  Final P[tbar]: %v, M=%v", tbarFinal[iReco], tbarFinal[iReco].M())
 		}
 	}
-
-	if i_weight_sel == 0 {
-		return tFinal, tbarFinal, status
-	}
-
-	var (
-		Top_fin_M    = mTop
-		Topbar_fin_M = mTopbar
-
-		Top_fin_E    = math.Sqrt(r3.Norm2(top_p_sum) + Top_fin_M*Top_fin_M)
-		Topbar_fin_E = math.Sqrt(r3.Norm2(topbar_p_sum) + Topbar_fin_M*Topbar_fin_M)
-	)
-
-	// Final reconstructed tops
-	tFinal = fmom.NewPxPyPzE(top_p_sum.X, top_p_sum.Y, top_p_sum.Z, Top_fin_E)
-	tbarFinal = fmom.NewPxPyPzE(topbar_p_sum.X, topbar_p_sum.Y, topbar_p_sum.Z, Topbar_fin_E)
-
-	// Status of the reconstruction
-	if !isBad(tFinal) && !isBad(tbarFinal) {
-		status = nGoodIter
-	}
-
-	if debug {
-		log.Printf(" Final P[t]   : %v, M=%v", tFinal, tFinal.M())
-		log.Printf(" Final P[tbar]: %v, M=%v", tbarFinal, tbarFinal.M())
-	}
-
+	
 	// Return the results
 	return tFinal, tbarFinal, status
+}
+
+// Helper function reconstructing & combining various
+// smearing iterations, by doing the weighted mean.
+// The weight is obtained from M(l,b) distribution.
+func recoCombineIters(
+	l, lb, j, jb []fmom.PxPyPzE, etx, ety []float64,
+	mode builderMode, smearHs *smearingHistos, debug bool) (r3.Vec, r3.Vec, float64, int) {
+	
+	// Define output container for the return
+	var (
+		weight = 0.0
+		nIter = 0
+		p3t, p3tbar r3.Vec
+	)
+	
+	// Define the reco method
+	var reco func(
+		fmom.PxPyPzE, fmom.PxPyPzE,
+		fmom.PxPyPzE, fmom.PxPyPzE,
+		float64, float64, bool) (r3.Vec, r3.Vec, bool)
+	switch mode {
+	case sonnMode:
+		reco = sonnenschein
+	case ellMode:
+		reco = ellipsis
+	default:
+		panic("wrong [FIXE this error message]")
+	}
+
+	// Loop over iterations
+	for i := range(l) {
+
+		// The reco
+		t, tbar, OK := reco(l[i], lb[i], j[i], jb[i], etx[i], ety[i], debug)
+		
+		// Get the weight
+		var (
+			mlbarb fmom.PxPyPzE
+			mlbbar fmom.PxPyPzE
+		)
+		mlbarb.Set(fmom.Add(&lb[i], &j[i]))
+		mlbbar.Set(fmom.Add(&l[i], &jb[i]))
+
+		var (
+			binx1  = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
+			binx2  = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
+			w1     = 0.0
+			w2     = 0.0
+		)
+		
+		// Only if the reconstruction is successful:
+		//  - increment the number of good iteration
+		//  - compute the weight associated to this jet combination
+		if OK {
+			nIter += 1
+			
+			switch binx1 {
+			case hbook.UnderflowBin1D:
+				w1 = smearHs.Mlblb.Binning.Underflow().SumW()
+			case hbook.OverflowBin1D:
+				w1 = smearHs.Mlblb.Binning.Overflow().SumW()
+			default:
+				w1 = smearHs.Mlblb.Value(binx1)
+			}
+			
+			switch binx2 {
+			case hbook.UnderflowBin1D:
+				w2 = smearHs.Mlblb.Binning.Underflow().SumW()
+			case hbook.OverflowBin1D:
+				w2 = smearHs.Mlblb.Binning.Overflow().SumW()
+			default:
+				w2 = smearHs.Mlblb.Value(binx2)
+			}
+		}
+
+		p3t    = p3t.Add(t.Scale(w1*w2))
+		p3tbar = p3tbar.Add(tbar.Scale(w1*w2))
+		weight += w1*w2
+		
+		if debug {
+			log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", p3t.X, p3t.Y, p3t.Z)
+			log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", p3tbar.X, p3tbar.Y, p3tbar.Z)
+			log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", w1, w2)
+			log.Printf("   weight sum        : %5.3e", weight)
+		}
+		
+	}
+
+	// Divide by the total weight to get the proper average
+	p3t    = p3t.Scale(1./weight)
+	p3tbar = p3tbar.Scale(1./weight)
+	
+	// Return the result
+	return p3t, p3tbar, weight, nIter
+}
+
+// SonnReco performs the Sonnenschein reconstruction and return 2 4-momentum
+// (top and anti-top) as well as a status of the reconstruction.
+// Status = N means the reconstruction worked for N smearing iterations.
+// Therefore, Status = 0 means the reconstruction has failed.
+// Four-momemtum and missing Et components must be given in GeV.
+// rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
+// If rndNumbers is not empty, smearing is automatically activated
+// for this function call for all kinematic variables. When several
+// tuples are passed, the  number of smearing iterations is set
+// to be number of tuples, ie len(rdnNumbers). The ordering of
+// random numbers is the following:
+//   rdn[12] = [12]float64{
+//     scaleLep , scaleLepBar ,
+//     thetaLep , thetaLepBar ,
+//     azimuLep , azimuLepBar ,
+//     scaleJet0, scaleJet0Bar,
+//     thetaJet0, thetaJet0Bar,
+//     azimuJet0, azimuJet0Bar,
+//     scaleJet1, scaleJet1Bar,
+//     thetaJet1, thetaJet1Bar,
+//     azimuJet1, azimuJet1Bar,
+//   }
+func (tb *TopBuilder) SonnReco(
+	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
+	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
+	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
+
+	// Set mode to Sonnenschein reco
+	tb.mode = sonnMode
+
+	// Run the reco
+	top, antiop, status := tb.reconstruct(
+		lepTLV, lepbarTLV, pdgIDLep,
+		pdgIDLepBar, jetTLV, jetbarTLV,
+		isbJet, isbJetbar,  emissx, emissy,
+		rdnNumbers...,
+	)
+
+	// Return the Sonnenschein result only
+	return top[0], antiop[0], status[0]
+}
+
+// ElliReco performs the Sonnenschein reconstruction and return 2 4-momentum
+// (top and anti-top) as well as a status of the reconstruction.
+// Status = N means the reconstruction worked for N smearing iterations.
+// Therefore, Status = 0 means the reconstruction has failed.
+// Four-momemtum and missing Et components must be given in GeV.
+// rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
+// If rndNumbers is not empty, smearing is automatically activated
+// for this function call for all kinematic variables. When several
+// tuples are passed, the  number of smearing iterations is set
+// to be number of tuples, ie len(rdnNumbers). The ordering of
+// random numbers is the following:
+//   rdn[12] = [12]float64{
+//     scaleLep , scaleLepBar ,
+//     thetaLep , thetaLepBar ,
+//     azimuLep , azimuLepBar ,
+//     scaleJet0, scaleJet0Bar,
+//     thetaJet0, thetaJet0Bar,
+//     azimuJet0, azimuJet0Bar,
+//     scaleJet1, scaleJet1Bar,
+//     thetaJet1, thetaJet1Bar,
+//     azimuJet1, azimuJet1Bar,
+//   }
+func (tb *TopBuilder) ElliReco(
+	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
+	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
+	emissx, emissy float64, rdnNumbers ...[12]float64) (fmom.PxPyPzE, fmom.PxPyPzE, int) {
+
+	// Set mode to Ellipse method
+	tb.mode = ellMode
+
+	// Run the reco
+	top, antiop, status := tb.reconstruct(
+		lepTLV, lepbarTLV, pdgIDLep,
+		pdgIDLepBar, jetTLV, jetbarTLV,
+		isbJet, isbJetbar,  emissx, emissy,
+		rdnNumbers...,
+	)
+
+	// Return the ellipse result only
+	return top[1], antiop[1], status[1]
+}
+
+// AllReco performs the Sonnenschein and the Ellipse reconstruction
+// and return 2 array of 4-momenta (top[2] and anti-top[2]) as well as
+// an array of status[2] of the reconstruction. The array index value
+// is 0 for the Sonnenschein method and 1 for the Ellipse method.
+// Status[i] = N means the reconstruction i worked for N smearing iterations.
+// Therefore, Status[i] = 0 means the reconstruction has failed.
+// Four-momemtum and missing Et components must be given in GeV.
+// rdnNumbers are tuples of the 12 numbers needed per smearing iteration.
+// If rndNumbers is not empty, smearing is automatically activated
+// for this function call for all kinematic variables. When several
+// tuples are passed, the  number of smearing iterations is set
+// to be number of tuples, ie len(rdnNumbers). The ordering of
+// random numbers is the following:
+//   rdn[12] = [12]float64{
+//     scaleLep , scaleLepBar ,
+//     thetaLep , thetaLepBar ,
+//     azimuLep , azimuLepBar ,
+//     scaleJet0, scaleJet0Bar,
+//     thetaJet0, thetaJet0Bar,
+//     azimuJet0, azimuJet0Bar,
+//     scaleJet1, scaleJet1Bar,
+//     thetaJet1, thetaJet1Bar,
+//     azimuJet1, azimuJet1Bar,
+//   }
+func (tb *TopBuilder) AllReco(
+	lepTLV, lepbarTLV fmom.PxPyPzE, pdgIDLep, pdgIDLepBar int,
+	jetTLV, jetbarTLV fmom.PxPyPzE, isbJet, isbJetbar bool,
+	emissx, emissy float64, rdnNumbers ...[12]float64) ([2]fmom.PxPyPzE, [2]fmom.PxPyPzE, [2]int) {
+
+	// Set mode to all reco
+	tb.mode = allMode
+
+	// Return the both results
+	return  tb.reconstruct(
+		lepTLV, lepbarTLV, pdgIDLep,
+		pdgIDLepBar, jetTLV, jetbarTLV,
+		isbJet, isbJetbar,  emissx, emissy,
+		rdnNumbers...,
+	)
 }
 
 // Helper function returning the absolute value of an int.

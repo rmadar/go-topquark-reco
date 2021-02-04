@@ -21,9 +21,7 @@ type config struct {
 	smearJetPt    bool
 	smearJetTheta bool
 	smearJetAzimu bool
-
-	mode builderMode // mode selects the builder reconstruction mode.
-
+	
 	// Debug printing
 	debug bool
 }
@@ -40,7 +38,6 @@ func newConfig() *config {
 		smearJetTheta: false,
 		smearJetAzimu: false,
 		smearN:        10,
-		mode:          sonnMode,
 		debug:         false,
 	}
 	return cfg
@@ -129,20 +126,6 @@ func WithSmearJetAzimu(d bool) Option {
 func WithSmearN(n int) Option {
 	return func(cfg *config) {
 		cfg.smearN = n
-	}
-}
-
-// WithSonnenschein sets the reconstruction method to Sonnenschein.
-func WithSonnenschein() Option {
-	return func(cfg *config) {
-		cfg.mode = sonnMode
-	}
-}
-
-// WithEllipsis sets the reconstruction method to Ellipsis.
-func WithEllipsis() Option {
-	return func(cfg *config) {
-		cfg.mode = ellMode
 	}
 }
 
