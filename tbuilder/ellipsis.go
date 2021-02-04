@@ -66,7 +66,7 @@ var (
 
 func (bldr *ellipsisBuilder) neutrinoMomenta() [][]r3.Vec {
 	nuEllCalc := newNeutrinoEllipseCalculator(
-		bldr.bjet, bldr.lepbar,	mTop, mW, mNu,
+		bldr.bjet, bldr.lepbar, mTop, mW, mNu,
 	)
 	nPerp := nuEllCalc.getNeutrinoEllipse()
 	if mat.Equal(nPerp, zero3x3) {

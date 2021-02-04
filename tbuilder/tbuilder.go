@@ -33,7 +33,7 @@ type builderMode byte
 
 const (
 	undefined builderMode = iota
-	sonnMode 
+	sonnMode
 	ellMode
 	allMode
 )
@@ -120,18 +120,18 @@ func New(fname string, opts ...Option) (*TopBuilder, error) {
 		log.Printf("  - Smearing jet theta : %v\n", cfg.smearJetTheta)
 		log.Printf("  - Smearing jet azimu : %v\n\n\n", cfg.smearJetAzimu)
 		/*
-		switch tb.mode {
-		case sonnMode:
-			log.Printf("  - Mode :               Sonnenschein\n\n\n")
-		case ellMode:
-			log.Printf("  - Mode :               Ellipsis\n\n\n")
-		case allMode:
-			log.Printf("  - Mode :               All methods\n\n\n")
-		default:
-			log.Printf("invalid builder mode %d", tb.mode)
-			return nil, fmt.Errorf("invalid builder mode (v=%d)", tb.mode)
-		}
-*/
+			switch tb.mode {
+			case sonnMode:
+				log.Printf("  - Mode :               Sonnenschein\n\n\n")
+			case ellMode:
+				log.Printf("  - Mode :               Ellipsis\n\n\n")
+			case allMode:
+				log.Printf("  - Mode :               All methods\n\n\n")
+			default:
+				log.Printf("invalid builder mode %d", tb.mode)
+				return nil, fmt.Errorf("invalid builder mode (v=%d)", tb.mode)
+			}
+		*/
 	}
 
 	// Return the reconstruction object
@@ -296,7 +296,7 @@ func (tb *TopBuilder) reconstruct(
 				jet_pt_smear, jetbar_pt_smear fmom.PxPyPzE
 				jet_nosmear, jetbar_nosmear   fmom.PxPyPzE
 			)
-			
+
 			// All random variables to smear variables
 			var (
 				smear_scale_lep_0 = 1.0
@@ -631,39 +631,39 @@ func (tb *TopBuilder) reconstruct(
 			}
 
 			// Fill the slices with smeared kinematics quantites
-			l[i_smear]   = lep
-			lb[i_smear]  = lepbar
-			j[i_smear]   = jet
-			jb[i_smear]  = jetbar
+			l[i_smear] = lep
+			lb[i_smear] = lepbar
+			j[i_smear] = jet
+			jb[i_smear] = jetbar
 			etx[i_smear] = Emiss_x_smear
 			ety[i_smear] = Emiss_y_smear
 		}
 
 		// Sonenschein: run the reconstruction over all smearing iterations and combined them.
-		if (tb.mode == sonnMode || tb.mode == allMode) {
+		if tb.mode == sonnMode || tb.mode == allMode {
 			p3t, p3tbar, w, nIter := recoCombineIters(l, lb, j, jb, etx, ety, sonnMode, tb.smearer, tb.debug)
 			recoMode := 0
-			Vec_Top[i_jets][recoMode]     = p3t
-			Vec_Topbar[i_jets][recoMode]  = p3tbar
+			Vec_Top[i_jets][recoMode] = p3t
+			Vec_Topbar[i_jets][recoMode] = p3tbar
 			nIterations[i_jets][recoMode] = nIter
-			weights_com[recoMode]         = append(weights_com[recoMode], w)
+			weights_com[recoMode] = append(weights_com[recoMode], w)
 		}
 
 		// Ellipse: run the reconstruction over all smearing iterations and combined them.
-		if (tb.mode == ellMode || tb.mode == allMode) {
+		if tb.mode == ellMode || tb.mode == allMode {
 			p3t, p3tbar, w, nIter := recoCombineIters(l, lb, j, jb, etx, ety, ellMode, tb.smearer, tb.debug)
 			recoMode := 1
-			Vec_Top[i_jets][recoMode]     = p3t
-			Vec_Topbar[i_jets][recoMode]  = p3tbar
+			Vec_Top[i_jets][recoMode] = p3t
+			Vec_Topbar[i_jets][recoMode] = p3tbar
 			nIterations[i_jets][recoMode] = nIter
-			weights_com[recoMode]         = append(weights_com[recoMode], w)
+			weights_com[recoMode] = append(weights_com[recoMode], w)
 		}
-		
+
 		if debug {
 			log.Printf("   number of iteration with solutions : %d", nIterations[i_jets])
 		}
 	}
-	
+
 	// Check whether we found a useful solution,
 	// depending of which reco were ran.
 	sonFails := len(weights_com[0]) == 0 && tb.mode == sonnMode
@@ -672,7 +672,7 @@ func (tb *TopBuilder) reconstruct(
 	if sonFails || ellFails || allFails {
 		return tFinal, tbarFinal, status
 	}
-	
+
 	if debug {
 		log.Printf(" Weight sum of jet combinatorics (0, 1): %5.2e, %5.2e", weights_com[0], weights_com[1])
 	}
@@ -685,9 +685,9 @@ func (tb *TopBuilder) reconstruct(
 		if len(weights_com[iReco]) == 0 {
 			continue
 		}
-		
+
 		// Get the best jet combinatorics index
-		jetComb  := -1
+		jetComb := -1
 		wJet1, wJet2 := weights_com[iReco][0], weights_com[iReco][1]
 		if wJet1 > wJet2 {
 			jetComb = 0
@@ -695,11 +695,11 @@ func (tb *TopBuilder) reconstruct(
 			jetComb = 1
 		} else {
 			return tFinal, tbarFinal, status
-		}	
+		}
 
 		// Get the final top 4-momenta for the current method
 		pt, ptb := Vec_Top[jetComb][iReco], Vec_Topbar[jetComb][iReco]
-		Top_fin_E    := math.Sqrt(r3.Norm2(pt) + mTop*mTop)
+		Top_fin_E := math.Sqrt(r3.Norm2(pt) + mTop*mTop)
 		Topbar_fin_E := math.Sqrt(r3.Norm2(ptb) + mTopbar*mTopbar)
 		tFinal[iReco] = fmom.NewPxPyPzE(pt.X, pt.Y, pt.Z, Top_fin_E)
 		tbarFinal[iReco] = fmom.NewPxPyPzE(ptb.X, ptb.Y, ptb.Z, Topbar_fin_E)
@@ -708,14 +708,14 @@ func (tb *TopBuilder) reconstruct(
 		if !isBad(tFinal[iReco]) && !isBad(tbarFinal[iReco]) {
 			status[iReco] = nIterations[jetComb][iReco]
 		}
-		
+
 		if debug {
 			log.Printf(" %v method:\n", methodName[iReco])
 			log.Printf("  Final P[t]   : %v, M=%v", tFinal[iReco], tFinal[iReco].M())
 			log.Printf("  Final P[tbar]: %v, M=%v", tbarFinal[iReco], tbarFinal[iReco].M())
 		}
 	}
-	
+
 	// Return the results
 	return tFinal, tbarFinal, status
 }
@@ -726,14 +726,14 @@ func (tb *TopBuilder) reconstruct(
 func recoCombineIters(
 	l, lb, j, jb []fmom.PxPyPzE, etx, ety []float64,
 	mode builderMode, smearHs *smearingHistos, debug bool) (r3.Vec, r3.Vec, float64, int) {
-	
+
 	// Define output container for the return
 	var (
-		weight = 0.0
-		nIter = 0
+		weight      = 0.0
+		nIter       = 0
 		p3t, p3tbar r3.Vec
 	)
-	
+
 	// Define the reco method
 	var reco func(
 		fmom.PxPyPzE, fmom.PxPyPzE,
@@ -749,11 +749,11 @@ func recoCombineIters(
 	}
 
 	// Loop over iterations
-	for i := range(l) {
+	for i := range l {
 
 		// The reco
 		t, tbar, OK := reco(l[i], lb[i], j[i], jb[i], etx[i], ety[i], debug)
-		
+
 		// Get the weight
 		var (
 			mlbarb fmom.PxPyPzE
@@ -763,18 +763,18 @@ func recoCombineIters(
 		mlbbar.Set(fmom.Add(&l[i], &jb[i]))
 
 		var (
-			binx1  = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
-			binx2  = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
-			w1     = 0.0
-			w2     = 0.0
+			binx1 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbarb.M())
+			binx2 = hbook.Bin1Ds(smearHs.Mlblb.Binning.Bins).IndexOf(mlbbar.M())
+			w1    = 0.0
+			w2    = 0.0
 		)
-		
+
 		// Only if the reconstruction is successful:
 		//  - increment the number of good iteration
 		//  - compute the weight associated to this jet combination
 		if OK {
 			nIter += 1
-			
+
 			switch binx1 {
 			case hbook.UnderflowBin1D:
 				w1 = smearHs.Mlblb.Binning.Underflow().SumW()
@@ -783,7 +783,7 @@ func recoCombineIters(
 			default:
 				w1 = smearHs.Mlblb.Value(binx1)
 			}
-			
+
 			switch binx2 {
 			case hbook.UnderflowBin1D:
 				w2 = smearHs.Mlblb.Binning.Underflow().SumW()
@@ -794,23 +794,23 @@ func recoCombineIters(
 			}
 		}
 
-		p3t    = p3t.Add(t.Scale(w1*w2))
-		p3tbar = p3tbar.Add(tbar.Scale(w1*w2))
-		weight += w1*w2
-		
+		p3t = p3t.Add(t.Scale(w1 * w2))
+		p3tbar = p3tbar.Add(tbar.Scale(w1 * w2))
+		weight += w1 * w2
+
 		if debug {
 			log.Printf("   (px, py, pz)[t]   : %3.2f, %3.2f, %3.2f", p3t.X, p3t.Y, p3t.Z)
 			log.Printf("   (px, py, pz)[tbar]: %3.2f, %3.2f, %3.2f", p3tbar.X, p3tbar.Y, p3tbar.Z)
 			log.Printf("   weight[t, tbar]   : %5.3e, %5.3e", w1, w2)
 			log.Printf("   weight sum        : %5.3e", weight)
 		}
-		
+
 	}
 
 	// Divide by the total weight to get the proper average
-	p3t    = p3t.Scale(1./weight)
-	p3tbar = p3tbar.Scale(1./weight)
-	
+	p3t = p3t.Scale(1. / weight)
+	p3tbar = p3tbar.Scale(1. / weight)
+
 	// Return the result
 	return p3t, p3tbar, weight, nIter
 }
@@ -849,7 +849,7 @@ func (tb *TopBuilder) SonnReco(
 	top, antiop, status := tb.reconstruct(
 		lepTLV, lepbarTLV, pdgIDLep,
 		pdgIDLepBar, jetTLV, jetbarTLV,
-		isbJet, isbJetbar,  emissx, emissy,
+		isbJet, isbJetbar, emissx, emissy,
 		rdnNumbers...,
 	)
 
@@ -891,7 +891,7 @@ func (tb *TopBuilder) ElliReco(
 	top, antiop, status := tb.reconstruct(
 		lepTLV, lepbarTLV, pdgIDLep,
 		pdgIDLepBar, jetTLV, jetbarTLV,
-		isbJet, isbJetbar,  emissx, emissy,
+		isbJet, isbJetbar, emissx, emissy,
 		rdnNumbers...,
 	)
 
@@ -932,10 +932,10 @@ func (tb *TopBuilder) AllReco(
 	tb.mode = allMode
 
 	// Return the both results
-	return  tb.reconstruct(
+	return tb.reconstruct(
 		lepTLV, lepbarTLV, pdgIDLep,
 		pdgIDLepBar, jetTLV, jetbarTLV,
-		isbJet, isbJetbar,  emissx, emissy,
+		isbJet, isbJetbar, emissx, emissy,
 		rdnNumbers...,
 	)
 }

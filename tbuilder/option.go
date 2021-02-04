@@ -21,7 +21,7 @@ type config struct {
 	smearJetPt    bool
 	smearJetTheta bool
 	smearJetAzimu bool
-	
+
 	// Debug printing
 	debug bool
 }

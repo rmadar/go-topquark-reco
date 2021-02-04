@@ -6,7 +6,7 @@ import (
 	"log"
 	"math"
 	//"strings"
-	
+
 	"go-hep.org/x/hep/fmom"
 	"go-hep.org/x/hep/groot"
 	"go-hep.org/x/hep/groot/rtree"
@@ -174,7 +174,7 @@ func main() {
 		if nIterEL == 0 {
 			nBadEllO++
 		}
-		
+
 		// Print some information
 		fmt.Printf("Entry %d:\n", ctx.Entry)
 		fmt.Printf("   - Evt number   %v\n", evtNum)
@@ -186,7 +186,7 @@ func main() {
 		fmt.Printf("   - P4[top]      %v\n", t)
 		fmt.Printf("   - P4[anti-top] %v\n", tbar)
 		fmt.Printf("\n")
-		
+
 		return nil
 	})
 
