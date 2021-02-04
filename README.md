@@ -17,7 +17,7 @@ Before the event loop starts, the tool must be initialized (few options are poss
 ```
 
 For each event, the relevant four-momentum must be gathered and three
-methods can be called depending on which methods you want. Please note that the third
+methods can be called depending on which methods you want. **Important note:** the third
 method `AllReco()` is faster than calling both `SonnReco()` and `ElliReco()`
 because the smearing of the kinematics if performed only once (while it would be done twice if
 the two individual functions would be called). In that case, the returned objects
