@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	//"strings"
 
 	"go-hep.org/x/hep/fmom"
 	"go-hep.org/x/hep/groot"
@@ -49,8 +48,6 @@ func main() {
 	var (
 		nBadSon   = 0
 		nBadEll   = 0
-		nBadSonO  = 0
-		nBadEllO  = 0
 		evtNum    int64
 		lepPt     []float32
 		lepEta    []float32
@@ -115,7 +112,6 @@ func main() {
 			lep1 fmom.PxPyPzE
 			jet0 fmom.PxPyPzE
 			jet1 fmom.PxPyPzE
-
 			lid0 int
 			lid1 int
 		)
@@ -157,26 +153,6 @@ func main() {
 			nBadEll++
 		}
 
-		// Run Sonnenschein alone
-		_, _, nIterSO := topBuilder.SonnReco(
-			lep0, lep1, lid0, lid1,
-			jet0, jet1, j1b, j2b,
-			Etx, Ety,
-		)
-		if nIterSO == 0 {
-			nBadSonO++
-		}
-
-		// Run Ellipse alone
-		_, _, nIterEL := topBuilder.ElliReco(
-			lep0, lep1, lid0, lid1,
-			jet0, jet1, j1b, j2b,
-			Etx, Ety,
-		)
-		if nIterEL == 0 {
-			nBadEllO++
-		}
-
 		// Print some information
 		fmt.Printf("Entry %d:\n", ctx.Entry)
 		fmt.Printf("   - Evt number   %v\n", evtNum)
@@ -193,8 +169,8 @@ func main() {
 	})
 
 	fmt.Printf("Number of events w/o reconstruction: \n")
-	fmt.Printf("  * Sonnenschein: %v (allMode), %v (SonMode)\n", nBadSon, nBadSonO)
-	fmt.Printf("  * Ellipsis    : %v (allMode), %v (EllMode)\n", nBadEll, nBadEllO)
+	fmt.Printf("  * Sonnenschein: %v \n", nBadSon)
+	fmt.Printf("  * Ellipsis    : %v \n", nBadEll)
 
 	if err != nil {
 		log.Fatalf("could not process tree: %+v", err)
