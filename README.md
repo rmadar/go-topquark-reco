@@ -21,18 +21,13 @@ Before the event loop starts, the tool must be initialized (few options are poss
 ```
 
 For each event, the relevant four-momentum must be gathered and three
-methods can be called depending on which methods you want. **Important note:** the third
-method `AllReco()` is faster than calling both `SonnReco()` and `ElliReco()`
-because the smearing of the kinematics if performed only once (while it would be done twice if
-the two individual functions would be called). In that case, the returned objects
-are four-momentum arrays of 2 elements each (`ts[0]` is the top 4-momentum obtained by the
-Sonnenschein methods, while `ts[1]` is the top 4-momentum obtained by the Ellipse method).
- 
- 
+methods can be called depending on which methods you want. The needed
+variables are the following:
+
 ```go
  // In the event loop: get the needed inputs
  var (
-        // Lepton 4-momentum and flavour
+        // Lepton 4-momentum and flavour (PDG id)
         lep0, lep1 fmom.PxPyPzE
         lid0, lid1 int
 
@@ -43,7 +38,16 @@ Sonnenschein methods, while `ts[1]` is the top 4-momentum obtained by the Ellips
         // Missing ET
         etx, ety  float64
      )
+```
 
+The three methods can be called as below. **Important note:** the third
+method `AllReco()` is faster than calling both `SonnReco()` and `ElliReco()`
+because the smearing of the kinematics if performed only once (while it would be done twice if
+the two individual functions would be called). In that case, the returned objects
+are four-momentum arrays of 2 elements each (`ts[0]` is the top 4-momentum obtained by the
+Sonnenschein methods, while `ts[1]` is the top 4-momentum obtained by the Ellipse method).
+ 
+```go
   // Call the Sonnenschein reconstruction only
   t, tbar, nIterations := tb.SonnReco(
 	   lep0, lep1, lid0, lid1,
