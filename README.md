@@ -17,7 +17,7 @@ Before the event loop starts, the tool must be initialized (few options are poss
 
 ```go
  // Before the event loop
- topBuilder, err := tbuilder.New("../testdata/smearingHistos.root")
+ tb, err := tbuilder.New("../testdata/smearingHistos.root")
 ```
 
 For each event, the relevant four-momentum must be gathered and three
@@ -45,21 +45,21 @@ Sonnenschein methods, while `ts[1]` is the top 4-momentum obtained by the Ellips
      )
 
   // Call the Sonnenschein reconstruction only
-  t, tbar, nIterations := topBuilder.SonnReco(
+  t, tbar, nIterations := tb.SonnReco(
 	   lep0, lep1, lid0, lid1,
 	   jet0, jet1, j1b, j2b,
 	   etx, ety,
      )
 
   // Call the Ellipse reconstruction only
-  t, tbar, nIterations := topBuilder.ElliReco(
+  t, tbar, nIterations := tb.ElliReco(
 	   lep0, lep1, lid0, lid1,
 	   jet0, jet1, j1b, j2b,
 	   etx, ety,
      )
 
   // Call the both reconstructions, avoiding to perform the smearing twice.
-  ts, tbars, nIterations := topBuilder.AllReco(
+  ts, tbars, nIterations := tb.AllReco(
 	   lep0, lep1, lid0, lid1,
 	   jet0, jet1, j1b, j2b, 
 	   etx, ety,   

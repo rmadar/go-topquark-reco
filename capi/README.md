@@ -1,5 +1,7 @@
 # How to use this tool in C/C++ with ROOT
 
+**THIS SECTION IS CURRENTLY OUT-OF-DATE**
+
 ### General methode
 
 The user needs 3 files: `libtopreco.h`, `libtopreco.so` and `topreco.h`. In the ROOT macro, this tool can be called in the following way:
